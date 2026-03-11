@@ -19,7 +19,16 @@ export default function AppHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card">
       <div className="mx-auto flex h-14 max-w-content items-center justify-between px-4">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          {location.pathname !== "/dashboard" && (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          )}
           <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
             <img src={nomuraLogo} alt="Nomura" className="h-5" />
             <div className="flex gap-[1px]">
