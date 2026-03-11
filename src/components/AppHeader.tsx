@@ -21,11 +21,11 @@ export default function AppHeader() {
         <div className="flex items-center gap-6">
           <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
             <img src={nomuraLogo} alt="Nomura" className="h-5" />
-            <div className="flex gap-0.5">
+            <div className="flex gap-[1px]">
               {"CYBERWORDAMENT".split("").map((letter, i) => (
                 <div
                   key={i}
-                  className="flex h-5 w-5 items-center justify-center rounded-sm border border-primary font-mono text-[10px] font-bold text-primary"
+                  className="flex h-4 w-[13px] items-center justify-center rounded-[2px] border border-primary font-mono text-[8px] font-bold text-primary"
                 >
                   {letter}
                 </div>

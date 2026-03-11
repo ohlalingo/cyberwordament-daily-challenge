@@ -22,11 +22,11 @@ export default function SignIn() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <img src={nomuraLogo} alt="Nomura" className="mx-auto mb-4 h-6" />
-          <div className="flex justify-center gap-1">
+          <div className="flex justify-center gap-[2px]">
             {"CYBERWORDAMENT".split("").map((letter, i) => (
               <div
                 key={i}
-                className="flex h-7 w-7 items-center justify-center rounded border-2 border-primary font-mono text-xs font-bold text-primary"
+                className="flex h-6 w-[17px] items-center justify-center rounded-sm border border-primary font-mono text-[11px] font-bold text-primary"
               >
                 {letter}
               </div>
