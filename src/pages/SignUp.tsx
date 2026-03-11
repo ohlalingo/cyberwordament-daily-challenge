@@ -26,7 +26,16 @@ export default function SignUp() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <img src={nomuraLogo} alt="Nomura" className="mx-auto mb-4 h-6" />
-          <h1 className="text-lg font-bold font-heading text-foreground">{t("appTitle")}</h1>
+          <div className="flex justify-center gap-1">
+            {"CYBERWORDAMENT".split("").map((letter, i) => (
+              <div
+                key={i}
+                className="flex h-7 w-7 items-center justify-center rounded border-2 border-primary font-mono text-xs font-bold text-primary"
+              >
+                {letter}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <h2 className="mb-6 text-base font-semibold font-heading text-foreground">{t("signUp")}</h2>
