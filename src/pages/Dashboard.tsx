@@ -3,7 +3,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import AppHeader from "@/components/AppHeader";
 
-const TITLE_LETTERS = "CYBERWORDAMENT".split("");
+
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -14,17 +14,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
-        {/* CYBERWORDAMENT letter boxes */}
-        <div className="mb-6 flex justify-center gap-1.5">
-          {TITLE_LETTERS.map((letter, i) => (
-            <div
-              key={i}
-              className="flex h-12 w-12 items-center justify-center rounded-lg border-2 border-primary font-mono text-xl font-bold text-primary"
-            >
-              {letter}
-            </div>
-          ))}
-        </div>
 
         <p className="mb-8 text-sm text-muted-foreground font-body text-center">
           {t("welcomeBack")}, {user?.name}

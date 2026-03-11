@@ -21,9 +21,16 @@ export default function AppHeader() {
         <div className="flex items-center gap-6">
           <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
             <img src={nomuraLogo} alt="Nomura" className="h-5" />
-            <span className="text-sm font-semibold font-heading text-foreground tracking-tight">
-              {t("appTitle")}
-            </span>
+            <div className="flex gap-0.5">
+              {"CYBERWORDAMENT".split("").map((letter, i) => (
+                <div
+                  key={i}
+                  className="flex h-5 w-5 items-center justify-center rounded-sm border border-primary font-mono text-[10px] font-bold text-primary"
+                >
+                  {letter}
+                </div>
+              ))}
+            </div>
           </button>
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
