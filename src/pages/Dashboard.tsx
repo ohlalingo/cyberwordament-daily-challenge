@@ -15,11 +15,11 @@ export default function Dashboard() {
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
         {/* CYBERWORDAMENT letter boxes */}
-        <div className="mb-6 flex justify-center gap-1">
+        <div className="mb-6 flex justify-center gap-1.5">
           {TITLE_LETTERS.map((letter, i) => (
             <div
               key={i}
-              className="flex h-10 w-10 items-center justify-center border-2 border-primary font-mono text-lg font-bold text-primary"
+              className="flex h-12 w-12 items-center justify-center rounded-lg border-2 border-primary font-mono text-xl font-bold text-primary"
             >
               {letter}
             </div>
