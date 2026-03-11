@@ -9,6 +9,8 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import Puzzle from "./pages/Puzzle";
+import WordSearch from "./pages/WordSearch";
+import Unjumble from "./pages/Unjumble";
 import Leaderboard from "./pages/Leaderboard";
 import Champions from "./pages/Champions";
 import NotFound from "./pages/NotFound";
