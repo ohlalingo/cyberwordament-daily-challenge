@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n, Language } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-
+import nomuraLogo from "@/assets/nomura-logo.png";
 
 export default function SignUp() {
   const { t, language, setLanguage } = useI18n();
@@ -25,7 +25,7 @@ export default function SignUp() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          
+          <img src={nomuraLogo} alt="Nomura" className="mx-auto mb-4 h-6" />
           <div className="flex justify-center gap-[2px]">
             {"CYBERWORDAMENT".split("").map((letter, i) => (
               <div
