@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n, Language } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import nomuraLogo from "@/assets/nomura-logo.jpg";
+import nomuraLogo from "@/assets/nomura-logo.png";
 
 export default function SignIn() {
   const { t, language, setLanguage } = useI18n();

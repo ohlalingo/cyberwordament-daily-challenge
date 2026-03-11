@@ -3,9 +3,10 @@ import AppHeader from "@/components/AppHeader";
 
 const champions = [
   { region: "japan", name: "Tanaka Yuki", score: 100, time: "1:45" },
-  { region: "apac", name: "Sarah Chen", score: 100, time: "2:01" },
+  { region: "emea", name: "Maria Schmidt", score: 95, time: "2:34" },
+  { region: "aej", name: "Sarah Chen", score: 100, time: "2:01" },
   { region: "americas", name: "James Wilson", score: 95, time: "2:15" },
-  { region: "europe", name: "Maria Schmidt", score: 95, time: "2:34" },
+  { region: "india", name: "Raj Patel", score: 90, time: "2:45" },
 ];
 
 export default function Champions() {
