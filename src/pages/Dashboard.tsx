@@ -3,7 +3,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import AppHeader from "@/components/AppHeader";
 
-const TITLE_LETTERS = "CYBERWORDAMENT".split("");
+
 
 export default function Dashboard() {
   const { t } = useI18n();
