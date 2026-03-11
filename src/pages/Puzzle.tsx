@@ -38,8 +38,16 @@ export default function Puzzle() {
         next[row][col] = char;
         return next;
       });
+      // Auto-advance to next cell after typing a letter
+      if (char) {
+        const nextC = Math.min(col + 1, puzzle.gridSize - 1);
+        if (nextC !== col && grid[row]?.[nextC] !== null) {
+          setSelectedCell([row, nextC]);
+          inputRefs.current[row]?.[nextC]?.focus();
+        }
+      }
     },
-    [submitted, grid]
+    [submitted, grid, puzzle.gridSize]
   );
 
   const handleKeyDown = useCallback(
@@ -52,8 +60,6 @@ export default function Puzzle() {
       else if (e.key === "ArrowUp") nextR = Math.max(row - 1, 0);
       else if (e.key === "Backspace" && !userInput[row][col]) {
         nextC = Math.max(col - 1, 0);
-      } else if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
-        nextC = Math.min(col + 1, puzzle.gridSize - 1);
       } else return;
 
       if (grid[nextR]?.[nextC] !== null) {
