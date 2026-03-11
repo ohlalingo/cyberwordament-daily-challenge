@@ -44,8 +44,8 @@ export const samplePuzzle: PuzzleData = {
     { word: "VPN", clue: "Secure communication tunnel", clueJa: "安全な通信トンネル", direction: "down", row: 1, col: 0, number: 2 },
     { word: "MALWARE", clue: "Malicious software", clueJa: "悪意のあるソフトウェア", direction: "across", row: 4, col: 2, number: 3 },
     { word: "SPAM", clue: "Unwanted bulk messages", clueJa: "迷惑メール", direction: "down", row: 2, col: 3, number: 4 },
-    { word: "FIREWALL", clue: "Network security barrier", clueJa: "ネットワークセキュリティの壁", direction: "across", row: 6, col: 0, number: 5 },
-    { word: "RANSOMWARE", clue: "Encrypts files for payment", clueJa: "身代金を要求する暗号化", direction: "across", row: 8, col: 0, number: 6 },
+    { word: "FIREWALL", clue: "Network security barrier", clueJa: "ネットワークセキュリティの壁", direction: "across", row: 7, col: 0, number: 5 },
+    { word: "RANSOMWARE", clue: "Encrypts files for payment", clueJa: "身代金を要求する暗号化", direction: "across", row: 9, col: 0, number: 6 },
   ],
 };
 
