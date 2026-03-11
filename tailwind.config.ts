@@ -9,10 +9,15 @@ export default {
       center: true,
       padding: "2rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "960px",
       },
     },
     extend: {
+      fontFamily: {
+        heading: ['Noto Sans', 'Noto Sans JP', 'sans-serif'],
+        body: ['Noto Sans', 'Noto Sans JP', 'sans-serif'],
+        mono: ['Roboto Mono', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -47,6 +52,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -63,27 +72,34 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      maxWidth: {
+        content: "960px",
+      },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "cell-correct": {
+          "0%": { backgroundColor: "hsl(var(--card))" },
+          "50%": { backgroundColor: "hsl(var(--success))" },
+          "100%": { backgroundColor: "hsl(145 100% 34.5% / 0.15)" },
+        },
+        "cell-incorrect": {
+          "0%": { backgroundColor: "hsl(var(--card))" },
+          "50%": { backgroundColor: "hsl(var(--primary))" },
+          "100%": { backgroundColor: "hsl(0 100% 41% / 0.1)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "cell-correct": "cell-correct 0.4s ease-out forwards",
+        "cell-incorrect": "cell-incorrect 0.4s ease-out forwards",
       },
     },
   },
