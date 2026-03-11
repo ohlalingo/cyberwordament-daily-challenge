@@ -9,6 +9,8 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import Puzzle from "./pages/Puzzle";
+import WordSearch from "./pages/WordSearch";
+import Unjumble from "./pages/Unjumble";
 import Leaderboard from "./pages/Leaderboard";
 import Champions from "./pages/Champions";
 import NotFound from "./pages/NotFound";
@@ -28,6 +30,8 @@ function AppRoutes() {
       <Route path="/signup" element={<SignUp />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/puzzle" element={<ProtectedRoute><Puzzle /></ProtectedRoute>} />
+      <Route path="/wordsearch" element={<ProtectedRoute><WordSearch /></ProtectedRoute>} />
+      <Route path="/unjumble" element={<ProtectedRoute><Unjumble /></ProtectedRoute>} />
       <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
       <Route path="/champions" element={<ProtectedRoute><Champions /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
