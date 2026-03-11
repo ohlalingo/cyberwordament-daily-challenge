@@ -38,13 +38,17 @@ export default function Puzzle() {
         next[row][col] = char;
         return next;
       });
-      // Auto-advance to next cell after typing a letter
+      // Auto-advance to next cell after typing a letter (deferred to avoid focus race)
       if (char) {
-        const nextC = Math.min(col + 1, puzzle.gridSize - 1);
-        if (nextC !== col && grid[row]?.[nextC] !== null) {
-          setSelectedCell([row, nextC]);
-          inputRefs.current[row]?.[nextC]?.focus();
-        }
+        requestAnimationFrame(() => {
+          for (let nc = col + 1; nc < puzzle.gridSize; nc++) {
+            if (grid[row]?.[nc] !== null) {
+              setSelectedCell([row, nc]);
+              inputRefs.current[row]?.[nc]?.focus();
+              break;
+            }
+          }
+        });
       }
     },
     [submitted, grid, puzzle.gridSize]
