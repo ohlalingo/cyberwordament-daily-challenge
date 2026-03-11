@@ -23,9 +23,10 @@ export default function Leaderboard() {
     ? mockData
     : mockData.filter((d) => d.region.toLowerCase() === activeTab.toLowerCase() ||
         (activeTab === "japan" && d.region === "Japan") ||
-        (activeTab === "apac" && d.region === "APAC") ||
+        (activeTab === "emea" && d.region === "EMEA") ||
+        (activeTab === "aej" && d.region === "AEJ") ||
         (activeTab === "americas" && d.region === "Americas") ||
-        (activeTab === "europe" && d.region === "Europe")
+        (activeTab === "india" && d.region === "India")
       );
 
   return (

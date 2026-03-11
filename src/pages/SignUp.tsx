@@ -13,7 +13,7 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [region, setRegion] = useState("Japan");
 
-  const regions = ["Japan", "APAC", "Americas", "Europe", "Middle East"];
+  const regions = ["Japan", "EMEA", "AEJ", "Americas", "India"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

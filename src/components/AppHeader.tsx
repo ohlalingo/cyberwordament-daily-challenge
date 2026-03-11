@@ -1,7 +1,7 @@
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate, useLocation } from "react-router-dom";
-import nomuraLogo from "@/assets/nomura-logo.jpg";
+import nomuraLogo from "@/assets/nomura-logo.png";
 
 export default function AppHeader() {
   const { t } = useI18n();
