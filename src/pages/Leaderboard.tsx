@@ -4,16 +4,16 @@ import AppHeader from "@/components/AppHeader";
 
 const mockData = [
   { rank: 1, name: "Tanaka Yuki", region: "Japan", score: 100, time: "1:45" },
-  { rank: 2, name: "Sarah Chen", region: "APAC", score: 100, time: "2:01" },
+  { rank: 2, name: "Sarah Chen", region: "AEJ", score: 100, time: "2:01" },
   { rank: 3, name: "James Wilson", region: "Americas", score: 95, time: "2:15" },
-  { rank: 4, name: "Maria Schmidt", region: "Europe", score: 95, time: "2:34" },
+  { rank: 4, name: "Maria Schmidt", region: "EMEA", score: 95, time: "2:34" },
   { rank: 5, name: "Kenji Suzuki", region: "Japan", score: 90, time: "1:58" },
-  { rank: 6, name: "Ahmed Hassan", region: "Middle East", score: 90, time: "2:45" },
-  { rank: 7, name: "Li Wei", region: "APAC", score: 85, time: "3:02" },
+  { rank: 6, name: "Raj Patel", region: "India", score: 90, time: "2:45" },
+  { rank: 7, name: "Li Wei", region: "AEJ", score: 85, time: "3:02" },
   { rank: 8, name: "Emily Brown", region: "Americas", score: 85, time: "3:15" },
 ];
 
-const regionKeys = ["global", "japan", "apac", "americas", "europe"] as const;
+const regionKeys = ["global", "japan", "emea", "aej", "americas", "india"] as const;
 
 export default function Leaderboard() {
   const { t } = useI18n();
