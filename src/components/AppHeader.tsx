@@ -30,7 +30,7 @@ export default function AppHeader() {
             </button>
           )}
           <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
-            <img src={nomuraLogo} alt="Nomura" className="h-5" />
+            
             <div className="flex gap-[1px]">
               {"CYBERWORDAMENT".split("").map((letter, i) => (
                 <div
