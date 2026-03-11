@@ -1,0 +1,125 @@
+import React, { createContext, useContext, useState, useCallback } from "react";
+
+export type Language = "en" | "ja";
+
+const translations = {
+  en: {
+    appTitle: "CyberWordament",
+    signIn: "Sign In",
+    signUp: "Sign Up",
+    email: "Email",
+    password: "Password",
+    name: "Name",
+    region: "Region",
+    preferredLanguage: "Preferred Language",
+    createAccount: "Create Account",
+    noAccount: "Don't have an account?",
+    haveAccount: "Already have an account?",
+    todaysPuzzle: "Today's Puzzle",
+    leaderboard: "Leaderboard",
+    regionalChampions: "Regional Champions",
+    submit: "Submit",
+    across: "Across",
+    down: "Down",
+    rank: "Rank",
+    playerName: "Player Name",
+    score: "Score",
+    time: "Time",
+    global: "Global",
+    japan: "Japan",
+    apac: "APAC",
+    americas: "Americas",
+    europe: "Europe",
+    middleEast: "Middle East",
+    champion: "Champion",
+    completionTime: "Completion Time",
+    dashboard: "Game Dashboard",
+    welcomeBack: "Welcome back",
+    dailyChallenge: "Daily Cyber Challenge",
+    puzzleDescription: "Test your cybersecurity knowledge with today's crossword puzzle.",
+    startPuzzle: "Start Puzzle",
+    yourStats: "Your Stats",
+    puzzlesCompleted: "Puzzles Completed",
+    currentStreak: "Current Streak",
+    bestTime: "Best Time",
+    english: "English",
+    japanese: "日本語",
+    signOut: "Sign Out",
+    timeRemaining: "Time Remaining",
+  },
+  ja: {
+    appTitle: "CyberWordament",
+    signIn: "サインイン",
+    signUp: "サインアップ",
+    email: "メールアドレス",
+    password: "パスワード",
+    name: "名前",
+    region: "地域",
+    preferredLanguage: "言語設定",
+    createAccount: "アカウント作成",
+    noAccount: "アカウントをお持ちでないですか？",
+    haveAccount: "すでにアカウントをお持ちですか？",
+    todaysPuzzle: "今日のパズル",
+    leaderboard: "ランキング",
+    regionalChampions: "地域チャンピオン",
+    submit: "送信",
+    across: "横",
+    down: "縦",
+    rank: "順位",
+    playerName: "プレイヤー名",
+    score: "スコア",
+    time: "タイム",
+    global: "グローバル",
+    japan: "日本",
+    apac: "アジア太平洋",
+    americas: "アメリカ",
+    europe: "ヨーロッパ",
+    middleEast: "中東",
+    champion: "チャンピオン",
+    completionTime: "完了タイム",
+    dashboard: "ゲームダッシュボード",
+    welcomeBack: "おかえりなさい",
+    dailyChallenge: "サイバーチャレンジ",
+    puzzleDescription: "今日のクロスワードパズルでサイバーセキュリティの知識をテストしましょう。",
+    startPuzzle: "パズルを開始",
+    yourStats: "あなたの統計",
+    puzzlesCompleted: "完了パズル数",
+    currentStreak: "連続記録",
+    bestTime: "ベストタイム",
+    english: "English",
+    japanese: "日本語",
+    signOut: "サインアウト",
+    timeRemaining: "残り時間",
+  },
+} as const;
+
+type TranslationKey = keyof typeof translations.en;
+
+interface I18nContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey) => string;
+}
+
+const I18nContext = createContext<I18nContextType | null>(null);
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguage] = useState<Language>("en");
+
+  const t = useCallback(
+    (key: TranslationKey) => translations[language][key] || key,
+    [language]
+  );
+
+  return (
+    <I18nContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error("useI18n must be used within I18nProvider");
+  return ctx;
+}
