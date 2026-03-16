@@ -13,6 +13,7 @@ export default function WordSearch() {
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<Coord[]>([]);
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
+  const [lastFoundCells, setLastFoundCells] = useState<Set<string>>(new Set());
   const gridRef = useRef<HTMLDivElement>(null);
 
   const coordKey = (r: number, c: number) => `${r},${c}`;
@@ -30,7 +31,6 @@ export default function WordSearch() {
       const [sr, sc] = start;
       const dr = Math.sign(r - sr);
       const dc = Math.sign(c - sc);
-      // Only allow straight lines
       if (dr !== 0 && dc !== 0 && Math.abs(r - sr) !== Math.abs(c - sc)) return;
       if (dr === 0 && dc === 0) { setSelection([start]); return; }
 
@@ -57,19 +57,29 @@ export default function WordSearch() {
 
     const match = puzzle.words.find((w) => w.word === selectedWord || w.word === reversed);
     if (match && !foundWords.has(match.word)) {
+      const newCells = new Set<string>();
       setFoundWords((prev) => new Set([...prev, match.word]));
       setHighlightedCells((prev) => {
         const next = new Set(prev);
-        for (const [r, c] of selection) next.add(coordKey(r, c));
+        for (const [r, c] of selection) {
+          next.add(coordKey(r, c));
+          newCells.add(coordKey(r, c));
+        }
         return next;
       });
+      // Flash the newly found cells
+      setLastFoundCells(newCells);
+      setTimeout(() => setLastFoundCells(new Set()), 600);
     }
     setSelection([]);
   }, [selecting, selection, puzzle, foundWords]);
 
   const isSelected = (r: number, c: number) => selection.some(([sr, sc]) => sr === r && sc === c);
   const isHighlighted = (r: number, c: number) => highlightedCells.has(coordKey(r, c));
+  const isJustFound = (r: number, c: number) => lastFoundCells.has(coordKey(r, c));
   const allFound = foundWords.size === puzzle.words.length;
+
+  const getCellDelay = (ri: number, ci: number) => (ri * puzzle.gridSize + ci) * 15;
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,13 +108,16 @@ export default function WordSearch() {
                     onMouseDown={(e) => { e.preventDefault(); startSelect(ri, ci); }}
                     onMouseEnter={() => moveSelect(ri, ci)}
                     onMouseUp={endSelect}
-                    className={`flex h-8 w-8 cursor-pointer items-center justify-center font-mono text-sm font-bold transition-colors ${
-                      isHighlighted(ri, ci)
+                    className={`flex h-8 w-8 cursor-pointer items-center justify-center font-mono text-sm font-bold transition-all duration-200 animate-cell-pop ${
+                      isJustFound(ri, ci)
+                        ? "bg-success text-success-foreground scale-110"
+                        : isHighlighted(ri, ci)
                         ? "bg-success text-success-foreground"
                         : isSelected(ri, ci)
-                        ? "bg-primary text-primary-foreground"
-                        : "text-foreground hover:bg-muted"
+                        ? "bg-primary text-primary-foreground scale-105"
+                        : "text-foreground hover:bg-muted hover:scale-105"
                     }`}
+                    style={{ animationDelay: `${getCellDelay(ri, ci)}ms` }}
                   >
                     {letter}
                   </div>
@@ -114,14 +127,14 @@ export default function WordSearch() {
           </div>
 
           {/* Word list */}
-          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm animate-slide-up" style={{ animationDelay: "150ms" }}>
             <h3 className="mb-3 text-sm font-semibold font-heading text-foreground">Words to Find</h3>
             <ul className="space-y-3">
               {puzzle.words.map((w) => (
-                <li key={w.word} className="flex items-center gap-3">
+                <li key={w.word} className="flex items-center gap-3 transition-all duration-300">
                   <span
-                    className={`font-mono text-sm font-bold ${
-                      foundWords.has(w.word) ? "text-success line-through" : "text-foreground"
+                    className={`font-mono text-sm font-bold transition-all duration-500 ${
+                      foundWords.has(w.word) ? "text-success line-through scale-95 opacity-70" : "text-foreground"
                     }`}
                   >
                     {w.word}
@@ -129,11 +142,14 @@ export default function WordSearch() {
                   <span className="text-xs text-muted-foreground">
                     — {language === "ja" ? w.hintJa : w.hint}
                   </span>
+                  {foundWords.has(w.word) && (
+                    <span className="animate-celebrate text-sm">✓</span>
+                  )}
                 </li>
               ))}
             </ul>
             {allFound && (
-              <div className="mt-6 rounded-lg bg-success/10 p-3 text-center text-sm font-semibold text-success">
+              <div className="mt-6 rounded-lg bg-success/10 p-3 text-center text-sm font-semibold text-success animate-celebrate">
                 🎉 All words found!
               </div>
             )}
