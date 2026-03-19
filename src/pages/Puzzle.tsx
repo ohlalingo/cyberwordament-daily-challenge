@@ -2,11 +2,14 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import AppHeader from "@/components/AppHeader";
 import { samplePuzzle, buildGrid, CellState } from "@/lib/puzzle-data";
+import { API_BASE } from "@/lib/config";
+import { API_BASE } from "@/lib/config";
 
 export default function Puzzle() {
   const { t, language } = useI18n();
-  const puzzle = samplePuzzle;
-  const { grid, numbers } = buildGrid(puzzle);
+  const [puzzle, setPuzzle] = useState(samplePuzzle);
+  const [loading, setLoading] = useState(true);
+  const { grid, numbers } = useMemo(() => buildGrid(puzzle), [puzzle]);
 
   const [userInput, setUserInput] = useState<string[][]>(() =>
     Array.from({ length: puzzle.gridSize }, () => Array(puzzle.gridSize).fill(""))
@@ -16,7 +19,8 @@ export default function Puzzle() {
     Array.from({ length: puzzle.gridSize }, () => Array(puzzle.gridSize).fill("empty"))
   );
   const [submitted, setSubmitted] = useState(false);
-  const [seconds, setSeconds] = useState(600);
+  const TOTAL_TIME = 600;
+  const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [bouncingCell, setBouncingCell] = useState<string | null>(null);
   const [activeClue, setActiveClue] = useState<number | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -29,6 +33,68 @@ export default function Puzzle() {
     const interval = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(interval);
   }, [submitted]);
+
+  // Auto-submit/lock when timer hits zero
+  useEffect(() => {
+    if (!submitted && seconds === 0) {
+      handleSubmit();
+    }
+  }, [seconds, submitted]);
+
+  const handlePuzzleComplete = async (correctWords: number) => {
+    // mark local completion
+    localStorage.setItem("puzzle_completed", "true");
+
+    const timeTaken = TOTAL_TIME - seconds;
+    const puzzleContentId = (puzzle as any)?.puzzleContentId;
+    if (!puzzleContentId) {
+      console.error("🚨 Missing puzzleContentId — attempt NOT saved");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      await fetch(`${API_BASE}/attempt`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          puzzleContentId,
+          correctWords,
+          timeTaken,
+        }),
+      });
+
+      console.log("✅ Attempt saved");
+    } catch (err) {
+      console.error("❌ Failed to save attempt", err);
+    }
+  };
+
+  useEffect(() => {
+    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+      .then((data) => {
+        if (data?.crossword) {
+          setPuzzle({
+            ...samplePuzzle,
+            ...data.crossword,
+            puzzleContentId:
+              data.crossword.puzzleContentId ||
+              data.crossword.puzzle_content_id ||
+              samplePuzzle.puzzleContentId,
+          });
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("🚨 Puzzle fetch FAILED:", err);
+        setLoading(false);
+      });
+  }, [language]);
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -105,11 +171,13 @@ export default function Puzzle() {
 
   const handleSubmit = () => {
     setSubmitted(true);
+    localStorage.setItem("puzzle_completed", "true");
     const newStates: CellState[][] = Array.from({ length: puzzle.gridSize }, () =>
       Array(puzzle.gridSize).fill("empty")
     );
 
     let allCorrect = true;
+    let correctWordCount = 0;
     let delay = 0;
     for (const word of puzzle.words) {
       let correct = true;
@@ -121,6 +189,7 @@ export default function Puzzle() {
         if (userInput[r]?.[c] !== word.word[i]) correct = false;
       }
       if (!correct) allCorrect = false;
+      if (correct) correctWordCount += 1;
 
       setTimeout(() => {
         setCellStates((prev) => {
@@ -133,6 +202,9 @@ export default function Puzzle() {
       }, delay);
       delay += 150;
     }
+
+    // Save attempt
+    void handlePuzzleComplete(correctWordCount);
 
     if (allCorrect) {
       setTimeout(() => setShowCelebration(true), delay + 300);
@@ -151,12 +223,16 @@ export default function Puzzle() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+        {loading ? (
+          <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
+        ) : (
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
           <div className={`font-mono text-sm font-semibold transition-colors ${timerWarning ? "text-primary animate-pulse" : "text-foreground"}`}>
             {t("timeRemaining")}: {formatTime(seconds)}
           </div>
         </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grid */}
@@ -294,3 +370,23 @@ export default function Puzzle() {
     </div>
   );
 }
+  useEffect(() => {
+    const API_BASE =
+      import.meta.env.VITE_API_BASE ||
+      import.meta.env.VITE_API_URL ||
+      "http://13.60.205.129:3000";
+    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
+      .then((res) => res.ok ? res.json() : Promise.reject(res.statusText))
+      .then((data) => {
+        if (data?.crossword) {
+          setPuzzle({
+            ...samplePuzzle,
+            ...data.crossword,
+            puzzleContentId: data.crossword.puzzleContentId || data.crossword.puzzle_content_id || samplePuzzle.puzzleContentId,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("Puzzle fetch failed, using sample", err);
+      });
+  }, [language]);

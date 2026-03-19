@@ -1,16 +1,28 @@
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import AppHeader from "@/components/AppHeader";
 
-const champions = [
-  { region: "japan", name: "Tanaka Yuki", score: 100, time: "1:45" },
-  { region: "emea", name: "Maria Schmidt", score: 95, time: "2:34" },
-  { region: "aej", name: "Sarah Chen", score: 100, time: "2:01" },
-  { region: "americas", name: "James Wilson", score: 95, time: "2:15" },
-  { region: "india", name: "Raj Patel", score: 90, time: "2:45" },
-];
+function formatTime(seconds: number) {
+  if (seconds == null || Number.isNaN(seconds)) return "-";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export default function Champions() {
   const { t } = useI18n();
+  const [champions, setChampions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const api =
+      import.meta.env.VITE_API_BASE ||
+      import.meta.env.VITE_API_URL ||
+      "http://13.60.205.129:3000";
+    fetch(`${api}/regional-champions`)
+      .then((res) => res.json())
+      .then(setChampions)
+      .catch((err) => console.error("Champions error:", err));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,7 +43,7 @@ export default function Champions() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground font-heading">{t("completionTime")}</div>
-                  <div className="text-sm font-mono font-semibold text-foreground">{c.time}</div>
+                  <div className="text-sm font-mono font-semibold text-foreground">{formatTime(c.time)}</div>
                 </div>
               </div>
             </div>

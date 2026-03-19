@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import AppHeader from "@/components/AppHeader";
 import { sampleUnjumble } from "@/lib/unjumble-data";
+import { API_BASE } from "@/lib/config";
 
 interface WordState {
   userAnswer: string;
@@ -10,12 +11,79 @@ interface WordState {
 
 export default function Unjumble() {
   const { language } = useI18n();
-  const puzzle = sampleUnjumble;
+  const [puzzle, setPuzzle] = useState(sampleUnjumble);
+  const TOTAL_TIME = 600;
+  const [seconds, setSeconds] = useState(TOTAL_TIME);
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [words, setWords] = useState<WordState[]>(
     puzzle.words.map(() => ({ userAnswer: "", status: "pending" }))
   );
-  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+      .then((data) => {
+        if (data?.unjumble) {
+          setPuzzle({
+            ...sampleUnjumble,
+            ...data.unjumble,
+            puzzleContentId:
+              data.unjumble.puzzleContentId ||
+              data.unjumble.puzzle_content_id ||
+              sampleUnjumble.puzzleContentId,
+          });
+          setWords(data.unjumble.words.map(() => ({ userAnswer: "", status: "pending" })));
+          setSeconds(TOTAL_TIME);
+          setSubmitted(false);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("🚨 Unjumble fetch FAILED:", err);
+        setLoading(false);
+      });
+  }, [language]);
+
+  useEffect(() => {
+    if (submitted) return;
+    const interval = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(interval);
+  }, [submitted]);
+
+  useEffect(() => {
+    if (!submitted && seconds === 0) {
+      handleSubmit();
+    }
+  }, [seconds, submitted]);
+
+  const handleComplete = async (correctCount: number) => {
+    const puzzleContentId = (puzzle as any)?.puzzleContentId;
+    if (!puzzleContentId) {
+      console.error("🚨 Missing puzzleContentId — attempt NOT saved");
+      return;
+    }
+    const timeTaken = TOTAL_TIME - seconds;
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`${API_BASE}/attempt`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          puzzleContentId,
+          correctWords: correctCount,
+          timeTaken,
+        }),
+      });
+      localStorage.setItem("puzzle_completed", "true");
+    } catch (err) {
+      console.error("Failed to save unjumble attempt", err);
+    }
+  };
 
   const updateAnswer = useCallback((index: number, value: string) => {
     setWords((prev) =>
@@ -24,13 +92,15 @@ export default function Unjumble() {
   }, []);
 
   const handleSubmit = () => {
+    if (submitted) return;
+    const nextWords = words.map((w, i) => ({
+      ...w,
+      status: w.userAnswer === puzzle.words[i].answer ? "correct" : "incorrect",
+    }));
+    setWords(nextWords);
     setSubmitted(true);
-    setWords((prev) =>
-      prev.map((w, i) => ({
-        ...w,
-        status: w.userAnswer === puzzle.words[i].answer ? "correct" : "incorrect",
-      }))
-    );
+    const correctCount = nextWords.filter((w) => w.status === "correct").length;
+    void handleComplete(correctCount);
   };
 
   const correctCount = words.filter((w) => w.status === "correct").length;
@@ -40,14 +110,16 @@ export default function Unjumble() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+        {loading ? (
+          <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
+        ) : (
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-xl font-bold font-heading text-foreground">Unjumble</h1>
-          {submitted && (
-            <span className="text-sm font-mono text-muted-foreground animate-slide-up">
-              {correctCount}/{puzzle.words.length} correct
-            </span>
-          )}
+          <span className="text-sm font-mono text-muted-foreground">
+            {submitted ? `${correctCount}/${puzzle.words.length} correct • ` : ""}{Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
+          </span>
         </div>
+        )}
 
         <div className="space-y-4">
           {puzzle.words.map((word, i) => {
@@ -88,7 +160,7 @@ export default function Unjumble() {
                   type="text"
                   value={state.userAnswer}
                   onChange={(e) => updateAnswer(i, e.target.value)}
-                  disabled={submitted}
+                  disabled={submitted || seconds === 0}
                   placeholder="Type your answer..."
                   maxLength={word.answer.length}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 transition-all focus:scale-[1.01]"

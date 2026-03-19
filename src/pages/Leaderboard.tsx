@@ -1,33 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import AppHeader from "@/components/AppHeader";
 
-const mockData = [
-  { rank: 1, name: "Tanaka Yuki", region: "Japan", score: 100, time: "1:45" },
-  { rank: 2, name: "Sarah Chen", region: "AEJ", score: 100, time: "2:01" },
-  { rank: 3, name: "James Wilson", region: "Americas", score: 95, time: "2:15" },
-  { rank: 4, name: "Maria Schmidt", region: "EMEA", score: 95, time: "2:34" },
-  { rank: 5, name: "Kenji Suzuki", region: "Japan", score: 90, time: "1:58" },
-  { rank: 6, name: "Raj Patel", region: "India", score: 90, time: "2:45" },
-  { rank: 7, name: "Li Wei", region: "AEJ", score: 85, time: "3:02" },
-  { rank: 8, name: "Emily Brown", region: "Americas", score: 85, time: "3:15" },
-];
-
 const regionKeys = ["global", "japan", "emea", "aej", "americas", "india"] as const;
+
+function formatTime(seconds: number) {
+  if (seconds == null || Number.isNaN(seconds)) return "-";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export default function Leaderboard() {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<string>("global");
+  const [data, setData] = useState<any[]>([]);
 
-  const filtered = activeTab === "global"
-    ? mockData
-    : mockData.filter((d) => d.region.toLowerCase() === activeTab.toLowerCase() ||
-        (activeTab === "japan" && d.region === "Japan") ||
-        (activeTab === "emea" && d.region === "EMEA") ||
-        (activeTab === "aej" && d.region === "AEJ") ||
-        (activeTab === "americas" && d.region === "Americas") ||
-        (activeTab === "india" && d.region === "India")
-      );
+  useEffect(() => {
+    const api =
+      import.meta.env.VITE_API_BASE ||
+      import.meta.env.VITE_API_URL ||
+      "http://13.60.205.129:3000";
+    fetch(`${api}/leaderboard`)
+      .then((res) => res.json())
+      .then((res) => setData(res))
+      .catch((err) => console.error("Leaderboard error:", err));
+  }, []);
+
+  const filtered =
+    activeTab === "global"
+      ? data
+      : data.filter((d) => (d.region || "").toLowerCase() === activeTab.toLowerCase());
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,11 +68,13 @@ export default function Leaderboard() {
             <tbody>
               {filtered.map((row, i) => (
                 <tr key={i} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 text-sm font-mono text-foreground">{row.rank}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-foreground">{i + 1}</td>
                   <td className="px-4 py-3 text-sm font-body text-foreground">{row.name}</td>
                   <td className="px-4 py-3 text-sm font-body text-muted-foreground">{row.region}</td>
                   <td className="px-4 py-3 text-sm font-mono text-foreground text-right">{row.score}</td>
-                  <td className="px-4 py-3 text-sm font-mono text-muted-foreground text-right">{row.time}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-muted-foreground text-right">
+                    {formatTime(row.time)}
+                  </td>
                 </tr>
               ))}
             </tbody>

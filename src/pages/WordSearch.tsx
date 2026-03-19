@@ -1,13 +1,18 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import AppHeader from "@/components/AppHeader";
 import { sampleWordSearch } from "@/lib/wordsearch-data";
+import { API_BASE } from "@/lib/config";
 
 type Coord = [number, number];
 
 export default function WordSearch() {
   const { t, language } = useI18n();
-  const puzzle = sampleWordSearch;
+  const [puzzle, setPuzzle] = useState(sampleWordSearch);
+  const TOTAL_TIME = 600;
+  const [seconds, setSeconds] = useState(TOTAL_TIME);
+  const [completed, setCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
@@ -19,13 +24,14 @@ export default function WordSearch() {
   const coordKey = (r: number, c: number) => `${r},${c}`;
 
   const startSelect = useCallback((r: number, c: number) => {
+    if (completed || seconds === 0) return;
     setSelecting(true);
     setSelection([[r, c]]);
-  }, []);
+  }, [completed, seconds]);
 
   const moveSelect = useCallback(
     (r: number, c: number) => {
-      if (!selecting) return;
+      if (!selecting || completed || seconds === 0) return;
       const start = selection[0];
       if (!start) return;
       const [sr, sc] = start;
@@ -45,11 +51,40 @@ export default function WordSearch() {
       }
       setSelection(cells);
     },
-    [selecting, selection, puzzle.gridSize]
+    [selecting, selection, puzzle.gridSize, completed, seconds]
   );
 
+  const handleComplete = useCallback(async (correctWords: number) => {
+    if (completed) return;
+    setCompleted(true);
+    const timeTaken = TOTAL_TIME - seconds;
+    const puzzleContentId = (puzzle as any)?.puzzleContentId;
+    if (!puzzleContentId) {
+      console.error("🚨 Missing puzzleContentId — attempt NOT saved");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`${API_BASE}/attempt`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          puzzleContentId,
+          correctWords,
+          timeTaken,
+        }),
+      });
+      localStorage.setItem("puzzle_completed", "true");
+    } catch (err) {
+      console.error("Failed to save wordsearch attempt", err);
+    }
+  }, [puzzle, seconds, completed]);
+
   const endSelect = useCallback(() => {
-    if (!selecting) return;
+    if (!selecting || completed || seconds === 0) return;
     setSelecting(false);
 
     const selectedWord = selection.map(([r, c]) => puzzle.grid[r][c]).join("");
@@ -58,7 +93,9 @@ export default function WordSearch() {
     const match = puzzle.words.find((w) => w.word === selectedWord || w.word === reversed);
     if (match && !foundWords.has(match.word)) {
       const newCells = new Set<string>();
-      setFoundWords((prev) => new Set([...prev, match.word]));
+      const newFound = new Set(foundWords);
+      newFound.add(match.word);
+      setFoundWords(newFound);
       setHighlightedCells((prev) => {
         const next = new Set(prev);
         for (const [r, c] of selection) {
@@ -67,12 +104,15 @@ export default function WordSearch() {
         }
         return next;
       });
-      // Flash the newly found cells
       setLastFoundCells(newCells);
       setTimeout(() => setLastFoundCells(new Set()), 600);
+
+      if (newFound.size === puzzle.words.length) {
+        handleComplete(newFound.size);
+      }
     }
     setSelection([]);
-  }, [selecting, selection, puzzle, foundWords]);
+  }, [selecting, selection, puzzle, foundWords, completed, seconds, handleComplete]);
 
   const isSelected = (r: number, c: number) => selection.some(([sr, sc]) => sr === r && sc === c);
   const isHighlighted = (r: number, c: number) => highlightedCells.has(coordKey(r, c));
@@ -81,16 +121,60 @@ export default function WordSearch() {
 
   const getCellDelay = (ri: number, ci: number) => (ri * puzzle.gridSize + ci) * 15;
 
+  useEffect(() => {
+    if (completed) return;
+    const interval = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(interval);
+  }, [completed]);
+
+  useEffect(() => {
+    if (!completed && seconds === 0) {
+      handleComplete(foundWords.size);
+    }
+  }, [seconds, completed, foundWords.size, handleComplete]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+      .then((data) => {
+        if (data?.wordsearch) {
+          setPuzzle({
+            ...sampleWordSearch,
+            ...data.wordsearch,
+            puzzleContentId:
+              data.wordsearch.puzzleContentId ||
+              data.wordsearch.puzzle_content_id ||
+              sampleWordSearch.puzzleContentId,
+          });
+          setFoundWords(new Set());
+          setHighlightedCells(new Set());
+          setLastFoundCells(new Set());
+          setSelection([]);
+          setCompleted(false);
+          setSeconds(TOTAL_TIME);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("🚨 Wordsearch fetch FAILED:", err);
+        setLoading(false);
+      });
+  }, [language]);
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+        {loading ? (
+          <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
+        ) : (
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-xl font-bold font-heading text-foreground">Word Search</h1>
-          <span className="text-sm font-mono text-muted-foreground">
-            {foundWords.size}/{puzzle.words.length} found
-          </span>
+          <div className="text-sm font-mono text-muted-foreground">
+            {foundWords.size}/{puzzle.words.length} found • {Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
+          </div>
         </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grid */}
@@ -140,7 +224,7 @@ export default function WordSearch() {
                     {w.word}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    — {language === "ja" ? w.hintJa : w.hint}
+                    — {language === "ja" ? (w as any).hintJa ?? w.hint : w.hint}
                   </span>
                   {foundWords.has(w.word) && (
                     <span className="animate-celebrate text-sm">✓</span>

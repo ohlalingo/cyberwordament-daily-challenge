@@ -10,6 +10,7 @@ export interface PuzzleWord {
 
 export interface PuzzleData {
   puzzle_id: string;
+  puzzleContentId?: number;
   difficulty: string;
   score: number;
   type: "crossword" | "wordsearch" | "unjumble";
@@ -35,6 +36,7 @@ export interface PuzzleData {
 
 export const samplePuzzle: PuzzleData = {
   puzzle_id: "daily-2026-03-11",
+  puzzleContentId: 1,
   difficulty: "medium",
   score: 100,
   type: "crossword",
