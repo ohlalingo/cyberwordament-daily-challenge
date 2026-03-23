@@ -2,7 +2,6 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
-import nomuraLogo from "@/assets/nomura-logo.png";
 
 export default function AppHeader() {
   const { t } = useI18n();
@@ -30,7 +29,7 @@ export default function AppHeader() {
             </button>
           )}
           <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
-            <img src={nomuraLogo} alt="Nomura" className="h-5" />
+            <span className="text-lg font-extrabold text-primary">CW</span>
             <div className="flex gap-[1px]">
               {"CYBERWORDAMENT".split("").map((letter, i) => (
                 <div

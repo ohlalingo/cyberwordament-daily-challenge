@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n, Language } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import nomuraLogo from "@/assets/nomura-logo.png";
 
 export default function SignUp() {
   const { t, language, setLanguage } = useI18n();
@@ -11,13 +10,10 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [region, setRegion] = useState("Japan");
-
-  const regions = ["Japan", "EMEA", "AEJ", "Americas", "India"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    signUp(name, email, password, region);
+    signUp(name, email, password, language);
     navigate("/dashboard");
   };
 
@@ -25,7 +21,7 @@ export default function SignUp() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <img src={nomuraLogo} alt="Nomura" className="mx-auto mb-4 h-6" />
+        <div className="mx-auto mb-4 h-8 text-2xl font-extrabold text-primary">CyberWordament</div>
           <div className="flex justify-center gap-[2px]">
             {"CYBERWORDAMENT".split("").map((letter, i) => (
               <div
@@ -67,15 +63,6 @@ export default function SignUp() {
               <label className="mb-1.5 block text-xs font-medium font-heading text-muted-foreground">{t("password")}</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                 className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-body text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium font-heading text-muted-foreground">{t("region")}</label>
-              <select value={region} onChange={(e) => setRegion(e.target.value)}
-                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-body text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
-                {regions.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
             </div>
             <button type="submit"
               className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-opacity">

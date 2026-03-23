@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import AppHeader from "@/components/AppHeader";
 import { sampleWordSearch } from "@/lib/wordsearch-data";
 import { API_BASE } from "@/lib/config";
@@ -8,11 +9,16 @@ type Coord = [number, number];
 
 export default function WordSearch() {
   const { t, language } = useI18n();
+  const { user } = useAuth();
+  const lang = user?.language || language || "en";
   const [puzzle, setPuzzle] = useState(sampleWordSearch);
+  const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const requestedId = searchParams.get("puzzleContentId");
   const TOTAL_TIME = 600;
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasPuzzle, setHasPuzzle] = useState(false);
 
   const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
@@ -58,30 +64,47 @@ export default function WordSearch() {
     if (completed) return;
     setCompleted(true);
     const timeTaken = TOTAL_TIME - seconds;
-    const puzzleContentId = (puzzle as any)?.puzzleContentId;
-    if (!puzzleContentId) {
+    const puzzleContentId = Number((puzzle as any)?.puzzleContentId);
+    const userId = Number((user as any)?.id);
+    if (!puzzleContentId || !userId) {
       console.error("🚨 Missing puzzleContentId — attempt NOT saved");
       return;
     }
+    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+    const puzzleId = (puzzle as any)?.puzzleId;
     try {
       const token = localStorage.getItem("token");
-      await fetch(`${API_BASE}/attempt`, {
+      const res = await fetch(`${API_BASE}/attempt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          userId,
           puzzleContentId,
           correctWords,
           timeTaken,
         }),
       });
-      localStorage.setItem("puzzle_completed", "true");
+      if (res.ok) {
+        localStorage.setItem(completionKey, "true");
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(
+          new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
+        );
+      } else if (res.status === 409) {
+        console.warn("Attempt already recorded for this puzzle; marking as completed.");
+        localStorage.setItem(completionKey, "true");
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(
+          new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
+        );
+      }
     } catch (err) {
       console.error("Failed to save wordsearch attempt", err);
     }
-  }, [puzzle, seconds, completed]);
+  }, [puzzle, seconds, completed, user]);
 
   const endSelect = useCallback(() => {
     if (!selecting || completed || seconds === 0) return;
@@ -134,32 +157,55 @@ export default function WordSearch() {
   }, [seconds, completed, foundWords.size, handleComplete]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
+    fetch(`${API_BASE}/puzzle/today?lang=${lang}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
       .then((data) => {
-        if (data?.wordsearch) {
-          setPuzzle({
-            ...sampleWordSearch,
-            ...data.wordsearch,
-            puzzleContentId:
-              data.wordsearch.puzzleContentId ||
-              data.wordsearch.puzzle_content_id ||
-              sampleWordSearch.puzzleContentId,
-          });
-          setFoundWords(new Set());
-          setHighlightedCells(new Set());
-          setLastFoundCells(new Set());
-          setSelection([]);
-          setCompleted(false);
-          setSeconds(TOTAL_TIME);
+        const wsArr = Array.isArray(data?.wordsearch) ? data.wordsearch : data?.wordsearch ? [data.wordsearch] : [];
+        if (wsArr[0]) {
+          const chosen = requestedId
+            ? wsArr.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
+            : wsArr[0];
+          const ws = {
+            ...chosen,
+            puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
+          };
+          setPuzzle(ws);
+          setHasPuzzle(true);
+        } else {
+          setHasPuzzle(false);
         }
         setLoading(false);
       })
       .catch((err) => {
         console.error("🚨 Wordsearch fetch FAILED:", err);
+        setHasPuzzle(false);
         setLoading(false);
       });
-  }, [language]);
+  }, [lang]);
+
+  // Reset state when a new puzzle loads
+  useEffect(() => {
+    if (!puzzle?.grid) return;
+    setFoundWords(new Set());
+    setHighlightedCells(new Set());
+    setLastFoundCells(new Set());
+    setSelection([]);
+    setCompleted(false);
+    setSeconds(TOTAL_TIME);
+  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.grid]);
+
+  if (
+    !puzzle?.grid ||
+    puzzle.grid.length !== puzzle.gridSize
+  ) {
+    return (
+      <div className="text-center p-4">
+        Puzzle unavailable. Please try again.
+      </div>
+    );
+  }
+
+  console.log("PUZZLE DATA:", puzzle);
 
   return (
     <div className="min-h-screen bg-background">
@@ -167,9 +213,16 @@ export default function WordSearch() {
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
         {loading ? (
           <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
+        ) : !hasPuzzle ? (
+          <div className="text-center text-sm text-muted-foreground">No word search available today.</div>
         ) : (
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold font-heading text-foreground">Word Search</h1>
+          <div>
+            <h1 className="text-xl font-bold font-heading text-foreground">Word Search</h1>
+            <p className="text-xs text-muted-foreground">
+              Find words by dragging in straight lines. Words may appear forward, backward, or diagonally.
+            </p>
+          </div>
           <div className="text-sm font-mono text-muted-foreground">
             {foundWords.size}/{puzzle.words.length} found • {Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
           </div>
@@ -224,7 +277,7 @@ export default function WordSearch() {
                     {w.word}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    — {language === "ja" ? (w as any).hintJa ?? w.hint : w.hint}
+                    — {lang === "ja" ? (w as any).hintJa ?? w.hint : w.hint}
                   </span>
                   {foundWords.has(w.word) && (
                     <span className="animate-celebrate text-sm">✓</span>

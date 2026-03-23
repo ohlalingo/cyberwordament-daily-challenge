@@ -1,31 +1,55 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { API_BASE } from "./config";
+import { useI18n } from "./i18n";
 
 interface User {
+  id: number;
   name: string;
   email: string;
-  region: string;
+  language: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  signIn: (email: string, password: string) => void;
-  signUp: (name: string, email: string, password: string, region: string) => void;
+  signIn: (email: string, password: string, language?: string) => Promise<any>;
+  signUp: (name: string, email: string, password: string, language: string) => void;
   signOut: () => void;
   loaded: boolean;
+  isHydrated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const SESSION_KEY = "auth_user";
+const EXPIRY_KEY = "auth_expiry";
+const SESSION_MS = 5 * 60 * 1000; // 5 minutes
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const { setLanguage } = useI18n();
 
   // Hydrate from localStorage on first mount
   useEffect(() => {
-    const raw = typeof window !== "undefined" ? localStorage.getItem("auth_user") : null;
+    const raw = typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
+    const expiry = typeof window !== "undefined" ? Number(localStorage.getItem(EXPIRY_KEY)) : 0;
+    const now = Date.now();
+    if (expiry && expiry < now) {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(EXPIRY_KEY);
+    }
     if (raw) {
       try {
-        setUser(JSON.parse(raw));
+        const parsed = JSON.parse(raw);
+        const hydrated: User = {
+          id: parsed.id,
+          name: parsed.name,
+          email: parsed.email,
+          language: parsed.language || parsed.region || "en",
+        };
+        setUser(hydrated);
+        setLanguage(hydrated.language);
+        localStorage.setItem("lang", hydrated.language);
       } catch {
         localStorage.removeItem("auth_user");
       }
@@ -36,16 +60,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Persist on change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (user) localStorage.setItem("auth_user", JSON.stringify(user));
-    else localStorage.removeItem("auth_user");
+    if (user) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
+      localStorage.setItem("lang", user.language);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(EXPIRY_KEY);
+    }
   }, [user]);
 
-  const signIn = async (email: string, password: string) => {
-    const API_BASE =
-      import.meta.env.VITE_API_BASE ||
-      import.meta.env.VITE_API_URL ||
-      "http://13.60.205.129:3000";
-
+  const signIn = async (email: string, password: string, language = "en") => {
     const res = await fetch(`${API_BASE}/auth/signin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -58,12 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await res.json();
     const userData: User = {
+      id: data.id,
       name: data.name || email.split("@")[0],
       email: data.email || email,
-      region: data.region || "Japan",
+      language: language || data.language || data.region || "en",
     };
 
     setUser(userData);
+    setLanguage(userData.language);
+    localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
+    localStorage.setItem("lang", userData.language);
     if (data.token) {
       localStorage.setItem("token", data.token);
     }
@@ -71,14 +100,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data;
   };
 
-  const signUp = (name: string, email: string, _password: string, region: string) => {
-    setUser({ name, email, region });
+  const signUp = (name: string, email: string, _password: string, language: string) => {
+    setUser({ id: Date.now(), name, email, language }); // temp id until server returns one (signup not wired here)
+    setLanguage(language);
+    localStorage.setItem("lang", language);
   };
 
   const signOut = () => setUser(null);
 
+  // Inactivity timer: bump expiry on activity
+  useEffect(() => {
+    if (!user) return;
+    const bump = () => {
+      localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
+    };
+    const events = ["click", "keydown", "mousemove", "touchstart"];
+    events.forEach((ev) => window.addEventListener(ev, bump));
+    return () => events.forEach((ev) => window.removeEventListener(ev, bump));
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, loaded }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, loaded, isHydrated: loaded }}>
       {children}
     </AuthContext.Provider>
   );

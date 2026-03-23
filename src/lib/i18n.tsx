@@ -104,7 +104,18 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType | null>(null);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window === "undefined") return "en";
+    const stored = localStorage.getItem("lang");
+    return stored === "ja" ? "ja" : "en";
+  });
+
+  const setLanguage = useCallback((lang: Language) => {
+    setLanguageState(lang);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lang", lang);
+    }
+  }, []);
 
   const t = useCallback(
     (key: TranslationKey) => translations[language][key] || key,

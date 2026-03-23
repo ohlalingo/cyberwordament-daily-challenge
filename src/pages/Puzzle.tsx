@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import AppHeader from "@/components/AppHeader";
 import { samplePuzzle, buildGrid, CellState } from "@/lib/puzzle-data";
-import { API_BASE } from "@/lib/config";
 import { API_BASE } from "@/lib/config";
 
 export default function Puzzle() {
   const { t, language } = useI18n();
+  const { user, isHydrated, signOut } = useAuth();
+  const navigate = useNavigate();
+  const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const requestedId = searchParams.get("puzzleContentId");
+  const lang = user?.language || language || "en";
   const [puzzle, setPuzzle] = useState(samplePuzzle);
+  const [hasPuzzle, setHasPuzzle] = useState(false);
   const [loading, setLoading] = useState(true);
   const { grid, numbers } = useMemo(() => buildGrid(puzzle), [puzzle]);
 
@@ -42,59 +49,124 @@ export default function Puzzle() {
   }, [seconds, submitted]);
 
   const handlePuzzleComplete = async (correctWords: number) => {
-    // mark local completion
-    localStorage.setItem("puzzle_completed", "true");
-
     const timeTaken = TOTAL_TIME - seconds;
-    const puzzleContentId = (puzzle as any)?.puzzleContentId;
-    if (!puzzleContentId) {
+    const puzzleContentId = Number((puzzle as any)?.puzzleContentId);
+    const userId = Number(user?.id);
+    if (!puzzleContentId || !userId) {
       console.error("🚨 Missing puzzleContentId — attempt NOT saved");
       return;
     }
+    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+    const puzzleId = (puzzle as any)?.puzzleId;
 
     try {
       const token = localStorage.getItem("token");
 
-      await fetch(`${API_BASE}/attempt`, {
+      const res = await fetch(`${API_BASE}/attempt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          userId,
           puzzleContentId,
           correctWords,
           timeTaken,
         }),
       });
 
-      console.log("✅ Attempt saved");
+      if (res.ok) {
+        console.log("✅ Attempt saved");
+        localStorage.setItem(completionKey, "true");
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(
+          new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
+        );
+      } else if (res.status === 409) {
+        // Already completed in another language/session — treat as completed/locked
+        setSubmitted(true);
+        setShowCelebration(false);
+        console.warn("Attempt already recorded for this puzzle; marking as completed.");
+        localStorage.setItem(completionKey, "true");
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(
+          new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
+        );
+      } else {
+        console.error("❌ Attempt save failed", res.status);
+      }
     } catch (err) {
       console.error("❌ Failed to save attempt", err);
     }
   };
 
   useEffect(() => {
-    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
-      .then((data) => {
-        if (data?.crossword) {
-          setPuzzle({
-            ...samplePuzzle,
-            ...data.crossword,
-            puzzleContentId:
-              data.crossword.puzzleContentId ||
-              data.crossword.puzzle_content_id ||
-              samplePuzzle.puzzleContentId,
-          });
+    if (!isHydrated) return;
+    const preferredLang = lang || "en";
+
+    fetch(`${API_BASE}/puzzle/today?lang=${preferredLang}&t=${Date.now()}`)
+      .then((res) => {
+        if (res.status === 401) {
+          signOut();
+          navigate("/");
+          throw new Error("Unauthorized");
         }
-        setLoading(false);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        const crossArr = Array.isArray(data?.crossword) ? data.crossword : data?.crossword ? [data.crossword] : [];
+        const first = crossArr[0];
+        if (first) {
+        const chosen = requestedId
+          ? crossArr.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
+          : first;
+        const cw = {
+          ...chosen,
+          puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
+          // Normalize word fields so UI always has clue/clueJa even if API sends hint/hintJa
+          words: (chosen.words || []).map((w: any) => ({
+            ...w,
+            clue: w.clue ?? w.hint ?? "",
+            clueJa: w.clueJa ?? w.hintJa ?? w.clue ?? w.hint ?? "",
+          })),
+        };
+          setPuzzle(cw);
+          setHasPuzzle(true);
+        } else {
+          console.warn("Puzzle fetch succeeded but no crossword in payload");
+          setHasPuzzle(false);
+        }
       })
       .catch((err) => {
-        console.error("🚨 Puzzle fetch FAILED:", err);
+        console.warn("Puzzle fetch failed:", err);
+        setHasPuzzle(false);
+      })
+      .finally(() => {
         setLoading(false);
       });
-  }, [language]);
+  }, [isHydrated, lang, navigate, signOut]);
+
+  // Reset grid-dependent state whenever we load a fresh puzzle (size/content may change).
+  useEffect(() => {
+    const size = puzzle.gridSize;
+    setUserInput(Array.from({ length: size }, () => Array(size).fill("")));
+    setCellStates(Array.from({ length: size }, () => Array(size).fill("empty")));
+    setSelectedCell(null);
+    setActiveClue(null);
+    setSubmitted(false);
+    setSeconds(TOTAL_TIME);
+    setShowCelebration(false);
+  }, [puzzle.puzzleContentId, puzzle.gridSize, TOTAL_TIME]);
+
+  // If today's puzzle is already completed, bounce back to dashboard
+  useEffect(() => {
+    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? (puzzle as any)?.puzzleContentId}`;
+    if (completionKey && localStorage.getItem(completionKey)) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate, puzzle.puzzleId, puzzle.puzzleContentId]);
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -171,7 +243,6 @@ export default function Puzzle() {
 
   const handleSubmit = () => {
     setSubmitted(true);
-    localStorage.setItem("puzzle_completed", "true");
     const newStates: CellState[][] = Array.from({ length: puzzle.gridSize }, () =>
       Array(puzzle.gridSize).fill("empty")
     );
@@ -219,6 +290,34 @@ export default function Puzzle() {
   // Calculate staggered delay for cell pop-in
   const getCellDelay = (ri: number, ci: number) => (ri * puzzle.gridSize + ci) * 20;
 
+  // Defensive guards to prevent rendering while state is inconsistent
+  if (!puzzle?.words?.length) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader />
+        <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+          <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
+        </main>
+      </div>
+    );
+  }
+  if (!userInput?.length || userInput.length !== puzzle.gridSize) {
+    return null;
+  }
+
+  console.log("PUZZLE DATA:", puzzle);
+
+  if (!loading && !hasPuzzle) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader />
+        <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+          <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -227,7 +326,12 @@ export default function Puzzle() {
           <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
         ) : (
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
+          <div>
+            <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
+            <p className="text-xs text-muted-foreground">
+              Fill every highlighted square using the clues provided. Each clue has a single-word answer.
+            </p>
+          </div>
           <div className={`font-mono text-sm font-semibold transition-colors ${timerWarning ? "text-primary animate-pulse" : "text-foreground"}`}>
             {t("timeRemaining")}: {formatTime(seconds)}
           </div>
@@ -255,10 +359,14 @@ export default function Puzzle() {
                   return (
                     <div
                       key={`${ri}-${ci}`}
-                      className={`relative border border-border transition-all duration-150 animate-cell-pop ${
+                      className={`relative border border-border transition-all duration-150 ${
                         isSelected ? "border-primary z-10 shadow-sm shadow-primary/20" : ""
-                      } ${state === "correct" ? "animate-cell-correct" : ""
-                      } ${state === "incorrect" ? "animate-cell-incorrect" : ""
+                      } ${
+                        state === "correct"
+                          ? "animate-cell-correct-pop"
+                          : state === "incorrect"
+                          ? "animate-cell-incorrect-pop"
+                          : "animate-cell-pop"
                       } ${isBouncing ? "animate-type-bounce" : ""}`}
                       style={{
                         width: isSelected ? "38px" : "36px",
@@ -370,23 +478,3 @@ export default function Puzzle() {
     </div>
   );
 }
-  useEffect(() => {
-    const API_BASE =
-      import.meta.env.VITE_API_BASE ||
-      import.meta.env.VITE_API_URL ||
-      "http://13.60.205.129:3000";
-    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
-      .then((res) => res.ok ? res.json() : Promise.reject(res.statusText))
-      .then((data) => {
-        if (data?.crossword) {
-          setPuzzle({
-            ...samplePuzzle,
-            ...data.crossword,
-            puzzleContentId: data.crossword.puzzleContentId || data.crossword.puzzle_content_id || samplePuzzle.puzzleContentId,
-          });
-        }
-      })
-      .catch((err) => {
-        console.warn("Puzzle fetch failed, using sample", err);
-      });
-  }, [language]);

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n, Language } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import nomuraLogo from "@/assets/nomura-logo.png";
 
 export default function SignIn() {
   const { t, language, setLanguage } = useI18n();
@@ -11,17 +10,21 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    signIn(email, password);
-    navigate("/dashboard");
+    try {
+      await signIn(email, password, language);
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Sign-in failed", err);
+    }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <img src={nomuraLogo} alt="Nomura" className="mx-auto mb-4 h-6" />
+        <div className="mx-auto mb-4 h-8 text-2xl font-extrabold text-primary">CyberWordament</div>
           <div className="flex justify-center gap-[2px]">
             {"CYBERWORDAMENT".split("").map((letter, i) => (
               <div

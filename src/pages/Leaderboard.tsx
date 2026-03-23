@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { API_BASE } from "@/lib/config";
 import AppHeader from "@/components/AppHeader";
 
 const regionKeys = ["global", "japan", "emea", "aej", "americas", "india"] as const;
@@ -17,10 +18,7 @@ export default function Leaderboard() {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    const api =
-      import.meta.env.VITE_API_BASE ||
-      import.meta.env.VITE_API_URL ||
-      "http://13.60.205.129:3000";
+    const api = API_BASE;
     fetch(`${api}/leaderboard`)
       .then((res) => res.json())
       .then((res) => setData(res))

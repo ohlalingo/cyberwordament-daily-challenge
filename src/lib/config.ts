@@ -1,4 +1,3 @@
-export const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  import.meta.env.VITE_API_URL ||
-  "http://13.60.205.129:3000";
+// Normalize backend base URL; default to local backend if unset
+const rawBase = import.meta.env.VITE_API_BASE as string | undefined;
+export const API_BASE = (rawBase || "http://localhost:4000").replace(/\/$/, "");

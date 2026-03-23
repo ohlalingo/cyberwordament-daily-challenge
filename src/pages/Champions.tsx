@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { API_BASE } from "@/lib/config";
 import AppHeader from "@/components/AppHeader";
+import { Trophy } from "lucide-react";
 
 function formatTime(seconds: number) {
   if (seconds == null || Number.isNaN(seconds)) return "-";
@@ -11,44 +13,55 @@ function formatTime(seconds: number) {
 
 export default function Champions() {
   const { t } = useI18n();
-  const [champions, setChampions] = useState<any[]>([]);
+  const [data, setData] = useState<{ today: any[]; week: any[]; allTime: any[] }>({
+    today: [],
+    week: [],
+    allTime: [],
+  });
 
   useEffect(() => {
-    const api =
-      import.meta.env.VITE_API_BASE ||
-      import.meta.env.VITE_API_URL ||
-      "http://13.60.205.129:3000";
-    fetch(`${api}/regional-champions`)
+    const api = API_BASE;
+    fetch(`${api}/leaderboard/regional-champions`)
       .then((res) => res.json())
-      .then(setChampions)
+      .then((res) => setData({ today: res.today || [], week: res.week || [], allTime: res.allTime || [] }))
       .catch((err) => console.error("Champions error:", err));
   }, []);
+
+  const renderSection = (title: string, rows: any[]) => (
+    <section className="mb-10">
+      <div className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+        <Trophy className="h-5 w-5 text-primary" />
+        <span>{title}</span>
+      </div>
+      {!rows.length ? (
+        <div className="text-sm text-muted-foreground">{t("noData") || "No champions yet."}</div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+          {rows.map((c) => (
+            <div key={`${title}-${c.region}`} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+              <div className="mb-1 text-xs font-semibold font-heading text-primary uppercase tracking-wider">
+                {c.region}
+              </div>
+              <div className="text-lg font-bold font-heading text-foreground">{c.name}</div>
+              <div className="mt-2 text-sm text-muted-foreground font-body">
+                <div>Score: {c.score}</div>
+                <div>⏱ {formatTime(c.time)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
         <h1 className="mb-6 text-xl font-bold font-heading text-foreground">{t("regionalChampions")}</h1>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {champions.map((c) => (
-            <div key={c.region} className="rounded-lg border border-border bg-card p-6 shadow-sm">
-              <div className="mb-1 text-xs font-semibold font-heading text-primary uppercase tracking-wider">
-                {t(c.region as any)} {t("champion")}
-              </div>
-              <div className="text-lg font-bold font-heading text-foreground">{c.name}</div>
-              <div className="mt-3 flex gap-6">
-                <div>
-                  <div className="text-xs text-muted-foreground font-heading">{t("score")}</div>
-                  <div className="text-sm font-mono font-semibold text-foreground">{c.score}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground font-heading">{t("completionTime")}</div>
-                  <div className="text-sm font-mono font-semibold text-foreground">{formatTime(c.time)}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {renderSection("Today", data.today)}
+        {renderSection("This Week", data.week)}
+        {renderSection("All Time", data.allTime)}
       </main>
     </div>
   );

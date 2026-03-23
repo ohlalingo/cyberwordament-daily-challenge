@@ -94,6 +94,16 @@ export default {
           "50%": { backgroundColor: "hsl(var(--primary))" },
           "100%": { backgroundColor: "hsl(0 100% 41% / 0.1)" },
         },
+        "cell-correct-pop": {
+          "0%": { transform: "scale(0.9)", backgroundColor: "hsl(var(--card))", opacity: "0.8" },
+          "40%": { transform: "scale(1.08)", backgroundColor: "hsl(var(--success))" },
+          "100%": { transform: "scale(1)", backgroundColor: "hsl(145 100% 34.5% / 0.15)", opacity: "1" },
+        },
+        "cell-incorrect-pop": {
+          "0%": { transform: "scale(0.9)", backgroundColor: "hsl(var(--card))", opacity: "0.8" },
+          "40%": { transform: "scale(1.08)", backgroundColor: "hsl(var(--primary))" },
+          "100%": { transform: "scale(1)", backgroundColor: "hsl(0 100% 41% / 0.1)", opacity: "1" },
+        },
         "cell-pop": {
           "0%": { transform: "scale(0)", opacity: "0" },
           "70%": { transform: "scale(1.08)" },
@@ -128,6 +138,8 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "cell-correct": "cell-correct 0.4s ease-out forwards",
         "cell-incorrect": "cell-incorrect 0.4s ease-out forwards",
+        "cell-correct-pop": "cell-correct-pop 0.35s ease-out forwards",
+        "cell-incorrect-pop": "cell-incorrect-pop 0.35s ease-out forwards",
         "cell-pop": "cell-pop 0.3s ease-out forwards",
         "type-bounce": "type-bounce 0.2s ease-out",
         "clue-glow": "clue-glow 0.4s ease-out forwards",
