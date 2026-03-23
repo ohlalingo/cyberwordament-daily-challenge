@@ -56,7 +56,8 @@ export default function Puzzle() {
       console.error("🚨 Missing puzzleContentId — attempt NOT saved");
       return;
     }
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+        const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+        const altCompletionKey = `completed_puzzle_${puzzleContentId}`;
     const puzzleId = (puzzle as any)?.puzzleId;
 
     try {
@@ -79,6 +80,7 @@ export default function Puzzle() {
       if (res.ok) {
         console.log("✅ Attempt saved");
         localStorage.setItem(completionKey, "true");
+        localStorage.setItem(altCompletionKey, "true");
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(
           new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
@@ -89,6 +91,7 @@ export default function Puzzle() {
         setShowCelebration(false);
         console.warn("Attempt already recorded for this puzzle; marking as completed.");
         localStorage.setItem(completionKey, "true");
+        localStorage.setItem(altCompletionKey, "true");
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(
           new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })

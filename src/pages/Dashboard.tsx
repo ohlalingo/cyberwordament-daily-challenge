@@ -5,8 +5,6 @@ import { useAuth } from "@/lib/auth-context";
 import { API_BASE } from "@/lib/config";
 import AppHeader from "@/components/AppHeader";
 
-
-
 export default function Dashboard() {
   const { t } = useI18n();
   const { user } = useAuth();
@@ -28,9 +26,7 @@ export default function Dashboard() {
     () => () => {
       const now = new Date();
       // Convert to Stockholm time by re-parsing a localized string
-      const stockholmNow = new Date(
-        now.toLocaleString("en-US", { timeZone: "Europe/Stockholm" })
-      );
+      const stockholmNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Stockholm" }));
       const nextMidnight = new Date(stockholmNow);
       nextMidnight.setHours(24, 0, 0, 0);
       let diff = nextMidnight.getTime() - stockholmNow.getTime();
@@ -40,12 +36,7 @@ export default function Dashboard() {
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
 
-      return {
-        hours,
-        minutes,
-        seconds,
-        totalMs: diff,
-      };
+      return { hours, minutes, seconds, totalMs: diff };
     },
     []
   );
@@ -67,16 +58,22 @@ export default function Dashboard() {
   // Helper to recompute completion flags from localStorage and latest puzzle ids
   const recomputeCompleted = useCallback((meta: typeof puzzleMeta) => {
     const next: Record<string, boolean> = {};
-    const add = (key: string, items: { puzzleId?: number; puzzleContentId?: number }[]) => {
+    const add = (items: { puzzleId?: number; puzzleContentId?: number }[]) => {
       items.forEach((m) => {
-        const id = m.puzzleContentId || m.puzzleId; // prefer contentId so multiple slots per day stay independent
-        const token = `completed_puzzle_${id}`;
-        next[token] = Boolean(localStorage.getItem(token));
+        const contentId = m.puzzleContentId;
+        const dayId = m.puzzleId;
+        const contentKey = contentId ? `completed_puzzle_${contentId}` : null;
+        const dayKey = dayId ? `completed_puzzle_${dayId}` : null;
+        const completedFlag =
+          (contentKey && localStorage.getItem(contentKey)) ||
+          (dayKey && localStorage.getItem(dayKey));
+        if (contentKey) next[contentKey] = Boolean(completedFlag);
+        if (dayKey) next[dayKey] = Boolean(completedFlag);
       });
     };
-    add("crossword", meta.crossword);
-    add("wordsearch", meta.wordsearch);
-    add("unjumble", meta.unjumble);
+    add(meta.crossword);
+    add(meta.wordsearch);
+    add(meta.unjumble);
     setCompleted(next);
   }, []);
 
@@ -143,11 +140,13 @@ export default function Dashboard() {
       .catch((err) => console.error("Failed to load user stats", err));
   }, [user?.id]);
 
+  // Single running index so cards show 1, 2, 3 across all puzzle types
+  let cardIndex = 0;
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
-
         <p className="mb-8 text-sm text-muted-foreground font-body text-center">
           {t("welcomeBack")}, {user?.name}
         </p>
@@ -160,16 +159,17 @@ export default function Dashboard() {
 
         {/* Puzzle type cards (supports multiple slots) */}
         <div className="mb-8 grid gap-4 md:grid-cols-3">
-          {puzzleMeta.crossword.map((c, idx) => {
+          {puzzleMeta.crossword.map((c) => {
             const token = `completed_puzzle_${c.puzzleContentId || c.puzzleId}`;
             const isDone = completed[token];
+            const badge = ++cardIndex;
             return (
               <div key={token} className="rounded-lg border border-border bg-card p-5 shadow-sm flex flex-col">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-mono">
-                    {idx + 1}
+                    {badge}
                   </span>
-                  <h2 className="text-sm font-semibold font-heading text-foreground">Crossword {idx + 1}</h2>
+                  <h2 className="text-sm font-semibold font-heading text-foreground">Crossword</h2>
                 </div>
                 <p className="mb-4 text-xs text-muted-foreground font-body flex-1">Fill in the grid using cybersecurity clues.</p>
                 <button
@@ -185,16 +185,17 @@ export default function Dashboard() {
             );
           })}
 
-          {puzzleMeta.wordsearch.map((c, idx) => {
+          {puzzleMeta.wordsearch.map((c) => {
             const token = `completed_puzzle_${c.puzzleContentId || c.puzzleId}`;
             const isDone = completed[token];
+            const badge = ++cardIndex;
             return (
               <div key={token} className="rounded-lg border border-border bg-card p-5 shadow-sm flex flex-col">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-mono">
-                    {idx + 1}
+                    {badge}
                   </span>
-                  <h2 className="text-sm font-semibold font-heading text-foreground">Word Search {idx + 1}</h2>
+                  <h2 className="text-sm font-semibold font-heading text-foreground">Word Search</h2>
                 </div>
                 <p className="mb-4 text-xs text-muted-foreground font-body flex-1">Find hidden cybersecurity words in the grid.</p>
                 <button
@@ -210,16 +211,17 @@ export default function Dashboard() {
             );
           })}
 
-          {puzzleMeta.unjumble.map((c, idx) => {
+          {puzzleMeta.unjumble.map((c) => {
             const token = `completed_puzzle_${c.puzzleContentId || c.puzzleId}`;
             const isDone = completed[token];
+            const badge = ++cardIndex;
             return (
               <div key={token} className="rounded-lg border border-border bg-card p-5 shadow-sm flex flex-col">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-mono">
-                    {idx + 1}
+                    {badge}
                   </span>
-                  <h2 className="text-sm font-semibold font-heading text-foreground">Unjumble {idx + 1}</h2>
+                  <h2 className="text-sm font-semibold font-heading text-foreground">Unjumble</h2>
                 </div>
                 <p className="mb-4 text-xs text-muted-foreground font-body flex-1">Rearrange scrambled letters to form security terms.</p>
                 <button
@@ -238,28 +240,29 @@ export default function Dashboard() {
 
         <div>
           <h2 className="mb-4 text-base font-semibold font-heading text-foreground">{t("yourStats")}</h2>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: t("puzzlesCompleted"), value: String(stats.puzzlesCompleted ?? 0) },
-              { label: t("currentStreak"), value: String(stats.currentStreak ?? 0) },
-              {
-                label: t("bestTime"),
-                value:
-                  stats.bestTimeSeconds != null
-                    ? `${Math.floor(stats.bestTimeSeconds / 60)}:${(stats.bestTimeSeconds % 60)
-                        .toString()
-                        .padStart(2, "0")}`
-                    : "--",
-              },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-lg border border-border bg-card p-4 shadow-sm text-center">
-                <div className="text-2xl font-bold font-mono text-foreground">{stat.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground font-heading">{stat.label}</div>
-              </div>
-            ))}
+          <div className="grid gap-4 md:grid-cols-3">
+            <StatCard label={t("puzzlesCompleted")} value={String(stats.puzzlesCompleted)} />
+            <StatCard label={t("currentStreak")} value={String(stats.currentStreak)} />
+            <StatCard label={t("bestTime")} value={formatTime(stats.bestTimeSeconds)} />
           </div>
         </div>
       </main>
     </div>
   );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <div className="text-2xl font-bold font-heading text-foreground mb-1">{value}</div>
+      <div className="text-sm text-muted-foreground font-body">{label}</div>
+    </div>
+  );
+}
+
+function formatTime(seconds: number | null) {
+  if (seconds == null || Number.isNaN(seconds)) return "-";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }

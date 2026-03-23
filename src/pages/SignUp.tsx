@@ -10,11 +10,18 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [region, setRegion] = useState("Japan");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const regions = ["Japan", "EMEA", "AEJ", "Americas", "India"];
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    signUp(name, email, password, language);
-    navigate("/dashboard");
+    try {
+      await signUp(name, email, password, region, language);
+      navigate("/dashboard");
+    } catch (err: any) {
+      alert(err?.message || "Sign up failed");
+    }
   };
 
   return (
@@ -58,6 +65,20 @@ export default function SignUp() {
               <label className="mb-1.5 block text-xs font-medium font-heading text-muted-foreground">{t("email")}</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
                 className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-body text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium font-heading text-muted-foreground">{t("region")}</label>
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-body text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {regions.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium font-heading text-muted-foreground">{t("password")}</label>
