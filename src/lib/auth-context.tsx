@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       language,
     };
     setUser(userData);
-    setLanguage(userData.language);
+    setLanguage(userData.language as Language);
     localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
     localStorage.setItem("lang", userData.language);
     return userData;
