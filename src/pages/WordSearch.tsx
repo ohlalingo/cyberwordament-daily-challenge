@@ -192,7 +192,7 @@ export default function WordSearch() {
     setSelection([]);
     setCompleted(false);
     setSeconds(TOTAL_TIME);
-  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.grid]);
+  }, [(puzzle as any).puzzleContentId, puzzle.gridSize, puzzle.grid]);
 
   if (
     !puzzle?.grid ||

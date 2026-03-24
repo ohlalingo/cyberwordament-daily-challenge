@@ -92,6 +92,8 @@ const translations = {
     japanese: "日本語",
     signOut: "サインアウト",
     timeRemaining: "残り時間",
+    completed: "完了",
+    noData: "データがありません。",
   },
 } as const;
 
