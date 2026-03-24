@@ -9,17 +9,14 @@ export default function SignIn() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setError(null);
       await signIn(email, password, language);
       navigate("/dashboard");
     } catch (err) {
       console.error("Sign-in failed", err);
-      setError(t("loginFailed") ?? "Sign-in failed. Please sign up first.");
     }
   };
 
@@ -86,11 +83,6 @@ export default function SignIn() {
               {t("signIn")}
             </button>
           </form>
-          {error ? (
-            <p className="mt-3 text-xs font-body text-red-600" role="alert">
-              {error}
-            </p>
-          ) : null}
           <p className="mt-4 text-center text-xs text-muted-foreground font-body">
             {t("noAccount")}{" "}
             <button onClick={() => navigate("/signup")} className="text-primary font-semibold hover:underline">

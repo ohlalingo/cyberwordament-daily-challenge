@@ -86,7 +86,6 @@ export default function Unjumble() {
       return;
     }
     const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
-    const altCompletionKey = `completed_puzzle_${puzzleContentId}`;
     const puzzleId = (puzzle as any)?.puzzleId;
     const timeTaken = TOTAL_TIME - seconds;
     try {
@@ -106,7 +105,6 @@ export default function Unjumble() {
       });
       if (res.ok) {
         localStorage.setItem(completionKey, "true");
-        localStorage.setItem(altCompletionKey, "true");
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(
           new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
@@ -114,7 +112,6 @@ export default function Unjumble() {
       } else if (res.status === 409) {
         console.warn("Attempt already recorded for this puzzle; marking as completed.");
         localStorage.setItem(completionKey, "true");
-        localStorage.setItem(altCompletionKey, "true");
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(
           new CustomEvent("puzzle-completed", { detail: { puzzleId, puzzleContentId } })
