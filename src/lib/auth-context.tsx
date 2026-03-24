@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = (name: string, email: string, _password: string, language: string) => {
     setUser({ id: Date.now(), name, email, language }); // temp id until server returns one (signup not wired here)
-    setLanguage(language);
+    setLanguage(language as Language);
     localStorage.setItem("lang", language);
   };
 
