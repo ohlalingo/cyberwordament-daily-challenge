@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           language: parsed.language || parsed.region || "en",
         };
         setUser(hydrated);
-        setLanguage(hydrated.language);
+        setLanguage(hydrated.language as Language);
         localStorage.setItem("lang", hydrated.language);
       } catch {
         localStorage.removeItem("auth_user");
