@@ -21,10 +21,20 @@ export default function Champions() {
 
   useEffect(() => {
     const api = API_BASE;
-    fetch(`${api}/leaderboard/regional-champions`)
-      .then((res) => res.json())
-      .then((res) => setData({ today: res.today || [], week: res.week || [], allTime: res.allTime || [] }))
-      .catch((err) => console.error("Champions error:", err));
+    const tryFetch = async () => {
+      const url = `${api}/leaderboard/regional-champions`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const text = await res.text();
+        if (!text.trim().startsWith("{") && !text.trim().startsWith("[")) return;
+        const body = JSON.parse(text);
+        setData({ today: body.today || [], week: body.week || [], allTime: body.allTime || [] });
+      } catch (err) {
+        console.warn("Champions fetch failed for", url, err);
+      }
+    };
+    tryFetch();
   }, []);
 
   const renderSection = (title: string, rows: any[]) => (
