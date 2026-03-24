@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { API_BASE } from "./config";
-import { useI18n } from "./i18n";
+import { useI18n, Language } from "./i18n";
 
 interface User {
   id: number;
@@ -48,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           language: parsed.language || parsed.region || "en",
         };
         setUser(hydrated);
-        setLanguage(hydrated.language);
+        setLanguage(hydrated.language as Language);
         localStorage.setItem("lang", hydrated.language);
       } catch {
         localStorage.removeItem("auth_user");
@@ -71,38 +70,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const signIn = async (email: string, password: string, language = "en") => {
-    const res = await fetch(`${API_BASE}/auth/signin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!res.ok) {
-      throw new Error("Login failed");
-    }
-
-    const data = await res.json();
+    // Local-only auth — no backend required
     const userData: User = {
-      id: data.id,
-      name: data.name || email.split("@")[0],
-      email: data.email || email,
-      language: language || data.language || data.region || "en",
+      id: Date.now(),
+      name: email.split("@")[0],
+      email,
+      language,
     };
-
     setUser(userData);
-    setLanguage(userData.language);
+    setLanguage(userData.language as Language);
     localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
     localStorage.setItem("lang", userData.language);
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-    }
-
-    return data;
+    return userData;
   };
 
   const signUp = (name: string, email: string, _password: string, language: string) => {
     setUser({ id: Date.now(), name, email, language }); // temp id until server returns one (signup not wired here)
-    setLanguage(language);
+    setLanguage(language as Language);
     localStorage.setItem("lang", language);
   };
 

@@ -64,7 +64,7 @@ export default function Unjumble() {
     setWords(q.map(() => ({ userAnswer: "", status: "pending" })));
     setSeconds(TOTAL_TIME);
     setSubmitted(false);
-  }, [puzzle.puzzleContentId]);
+  }, [(puzzle as any).puzzleContentId]);
 
   useEffect(() => {
     if (submitted) return;
@@ -131,9 +131,9 @@ export default function Unjumble() {
   const handleSubmit = () => {
     if (submitted) return;
     const questions = (puzzle as any).questions ?? [];
-    const nextWords = words.map((w, i) => ({
+    const nextWords: WordState[] = words.map((w, i) => ({
       ...w,
-      status: w.userAnswer === questions[i]?.answer ? "correct" : "incorrect",
+      status: (w.userAnswer === questions[i]?.answer ? "correct" : "incorrect") as WordState["status"],
     }));
     setWords(nextWords);
     setSubmitted(true);
