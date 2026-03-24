@@ -46,6 +46,8 @@ const translations = {
     japanese: "日本語",
     signOut: "Sign Out",
     timeRemaining: "Time Remaining",
+    completed: "Completed",
+    noData: "No data yet.",
   },
   ja: {
     appTitle: "CyberWordament",
