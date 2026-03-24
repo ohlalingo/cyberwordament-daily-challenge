@@ -64,7 +64,7 @@ export default function Unjumble() {
     setWords(q.map(() => ({ userAnswer: "", status: "pending" })));
     setSeconds(TOTAL_TIME);
     setSubmitted(false);
-  }, [puzzle.puzzleContentId]);
+  }, [(puzzle as any).puzzleContentId]);
 
   useEffect(() => {
     if (submitted) return;
