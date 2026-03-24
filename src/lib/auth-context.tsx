@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { API_BASE } from "./config";
-import { useI18n } from "./i18n";
+import { useI18n, Language } from "./i18n";
 
 interface User {
   id: number;
