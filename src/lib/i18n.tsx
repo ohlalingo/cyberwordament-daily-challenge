@@ -48,6 +48,13 @@ const translations = {
     timeRemaining: "Time Remaining",
     completed: "Completed",
     noData: "No data yet.",
+    nextPuzzleUnlocks: "Next puzzle unlocks in",
+    crosswordTitle: "Crossword",
+    wordSearchTitle: "Word Search",
+    unjumbleTitle: "Unjumble",
+    crosswordDesc: "Fill in the grid using cybersecurity clues.",
+    wordSearchDesc: "Find hidden cybersecurity words in the grid.",
+    unjumbleDesc: "Rearrange scrambled letters to form security terms.",
   },
   ja: {
     appTitle: "CyberWordament",
@@ -94,6 +101,14 @@ const translations = {
     timeRemaining: "残り時間",
     completed: "完了",
     noData: "データがありません。",
+    nextPuzzleUnlocks: "次のパズルの解放まで",
+    crosswordTitle: "クロスワード",
+    wordSearchTitle: "ワードサーチ",
+    unjumbleTitle: "並べ替え",
+    crosswordDesc: "サイバーセキュリティのヒントを使ってマスを埋めましょう。",
+    wordSearchDesc: "グリッドの中に隠されたサイバーセキュリティ用語を探しましょう。",
+    unjumbleDesc: "並べ替えてサイバーセキュリティ用語を完成させましょう。",
+    crosswordPlayDesc: "ハイライトされたマスをすべて埋めてください。各ヒントには1つの答えがあります。",
   },
 } as const;
 

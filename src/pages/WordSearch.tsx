@@ -10,13 +10,15 @@ type Coord = [number, number];
 export default function WordSearch() {
   const { t, language } = useI18n();
   const { user } = useAuth();
-  const lang = user?.language || language || "en";
+  // Prefer current UI language over stored user language
+  const lang = language || user?.language || "en";
   const [puzzle, setPuzzle] = useState(sampleWordSearch);
   const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const requestedId = searchParams.get("puzzleContentId");
   const TOTAL_TIME = 600;
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [completed, setCompleted] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasPuzzle, setHasPuzzle] = useState(false);
 
@@ -132,6 +134,7 @@ export default function WordSearch() {
 
       if (newFound.size === puzzle.words.length) {
         handleComplete(newFound.size);
+        setShowCelebration(true);
       }
     }
     setSelection([]);
@@ -192,6 +195,7 @@ export default function WordSearch() {
     setSelection([]);
     setCompleted(false);
     setSeconds(TOTAL_TIME);
+    setShowCelebration(false);
   }, [(puzzle as any).puzzleContentId, puzzle.gridSize, puzzle.grid]);
 
   if (
@@ -218,9 +222,9 @@ export default function WordSearch() {
         ) : (
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold font-heading text-foreground">Word Search</h1>
+            <h1 className="text-xl font-bold font-heading text-foreground">{t("wordSearchTitle")}</h1>
             <p className="text-xs text-muted-foreground">
-              Find words by dragging in straight lines. Words may appear forward, backward, or diagonally.
+              {t("wordSearchDesc")}
             </p>
           </div>
           <div className="text-sm font-mono text-muted-foreground">
@@ -292,6 +296,21 @@ export default function WordSearch() {
             )}
           </div>
         </div>
+
+        {showCelebration && (
+          <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50 animate-fade-in">
+            <div className="rounded-xl bg-card border border-border shadow-lg px-6 py-5 text-center space-y-2">
+              <div className="text-3xl">🎉</div>
+              <div className="text-lg font-semibold text-foreground">All words found!</div>
+              <button
+                onClick={() => setShowCelebration(false)}
+                className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

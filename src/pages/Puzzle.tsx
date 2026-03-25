@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import AppHeader from "@/components/AppHeader";
-import { samplePuzzle, buildGrid, CellState } from "@/lib/puzzle-data";
+import { samplePuzzle, buildGrid, CellState, splitGraphemes } from "@/lib/puzzle-data";
 import { API_BASE } from "@/lib/config";
 
 export default function Puzzle() {
@@ -12,18 +12,19 @@ export default function Puzzle() {
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const requestedId = searchParams.get("puzzleContentId");
-  const lang = user?.language || language || "en";
+  // Prefer the currently selected UI language; fall back to user preference then English
+  const lang = language || user?.language || "en";
   const [puzzle, setPuzzle] = useState(samplePuzzle);
   const [hasPuzzle, setHasPuzzle] = useState(false);
   const [loading, setLoading] = useState(true);
   const { grid, numbers } = useMemo(() => buildGrid(puzzle), [puzzle]);
 
   const [userInput, setUserInput] = useState<string[][]>(() =>
-    Array.from({ length: puzzle.gridSize }, () => Array(puzzle.gridSize).fill(""))
+    Array.from({ length: puzzle.gridSize || 0 }, () => Array(puzzle.gridSize || 0).fill(""))
   );
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
   const [cellStates, setCellStates] = useState<CellState[][]>(() =>
-    Array.from({ length: puzzle.gridSize }, () => Array(puzzle.gridSize).fill("empty"))
+    Array.from({ length: puzzle.gridSize || 0 }, () => Array(puzzle.gridSize || 0).fill("empty"))
   );
   const [submitted, setSubmitted] = useState(false);
   const TOTAL_TIME = 600;
@@ -34,6 +35,12 @@ export default function Puzzle() {
   const inputRefs = useRef<(HTMLInputElement | null)[][]>(
     Array.from({ length: puzzle.gridSize }, () => Array(puzzle.gridSize).fill(null))
   );
+  // Keep inputRefs sized to the current grid to avoid out-of-bounds writes
+  useEffect(() => {
+    inputRefs.current = Array.from({ length: puzzle.gridSize }, () =>
+      Array(puzzle.gridSize).fill(null)
+    );
+  }, [puzzle.gridSize]);
 
   useEffect(() => {
     if (submitted) return;
@@ -122,15 +129,41 @@ export default function Puzzle() {
         const chosen = requestedId
           ? crossArr.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
           : first;
+        // Normalize gridSize and ensure words are present
+        const normalizedGridSize = Math.max(
+          Number(chosen.gridSize) || 0,
+          ...((chosen.words || []).map((w: any) => {
+            const letters = splitGraphemes(String(w.word ?? ""));
+            const endRow = w.direction === "down" ? (w.row ?? 0) + letters.length : (w.row ?? 0);
+            const endCol = w.direction === "across" ? (w.col ?? 0) + letters.length : (w.col ?? 0);
+            return Math.max(endRow + 1, endCol + 1);
+          }))
+        );
         const cw = {
           ...chosen,
           puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
+          gridSize: normalizedGridSize || 10, // fallback to 10 if still unknown
           // Normalize word fields so UI always has clue/clueJa even if API sends hint/hintJa
-          words: (chosen.words || []).map((w: any) => ({
-            ...w,
-            clue: w.clue ?? w.hint ?? "",
-            clueJa: w.clueJa ?? w.hintJa ?? w.clue ?? w.hint ?? "",
-          })),
+          words: (chosen.words || [])
+            .filter((w: any) => {
+              if (!w || !w.word || !w.direction) return false;
+              const hasCoords = w.row !== undefined && w.col !== undefined;
+              return hasCoords;
+            })
+            .map((w: any) => {
+              const letters = splitGraphemes(String(w.word ?? ""));
+              return {
+                ...w,
+                clue: w.clue ?? w.hint ?? "",
+                clueJa: w.clueJa ?? w.hintJa ?? w.clue ?? w.hint ?? "",
+                row: Number(w.row ?? 0),
+                col: Number(w.col ?? 0),
+                word: String(w.word ?? ""),
+                letters,
+                direction: w.direction === "down" ? "down" : "across",
+                number: Number(w.number ?? 0) || 0,
+              };
+            }),
         };
           setPuzzle(cw);
           setHasPuzzle(true);
@@ -251,13 +284,14 @@ export default function Puzzle() {
     let correctWordCount = 0;
     let delay = 0;
     for (const word of puzzle.words) {
+      const letters = (word as any).letters ?? splitGraphemes(word.word);
       let correct = true;
       const cells: [number, number][] = [];
-      for (let i = 0; i < word.word.length; i++) {
+      for (let i = 0; i < letters.length; i++) {
         const r = word.direction === "across" ? word.row : word.row + i;
         const c = word.direction === "across" ? word.col + i : word.col;
         cells.push([r, c]);
-        if (userInput[r]?.[c] !== word.word[i]) correct = false;
+        if (userInput[r]?.[c] !== letters[i]) correct = false;
       }
       if (!correct) allCorrect = false;
       if (correct) correctWordCount += 1;
@@ -329,7 +363,7 @@ export default function Puzzle() {
           <div>
             <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
             <p className="text-xs text-muted-foreground">
-              Fill every highlighted square using the clues provided. Each clue has a single-word answer.
+              {t("crosswordPlayDesc") || t("crosswordDesc")}
             </p>
           </div>
           <div className={`font-mono text-sm font-semibold transition-colors ${timerWarning ? "text-primary animate-pulse" : "text-foreground"}`}>

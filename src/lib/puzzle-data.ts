@@ -6,6 +6,7 @@ export interface PuzzleWord {
   row: number;
   col: number;
   number: number;
+  letters?: string[]; // optional pre-split graphemes
 }
 
 export interface PuzzleData {
@@ -53,23 +54,38 @@ export const samplePuzzle: PuzzleData = {
 
 export type CellState = "empty" | "active" | "correct" | "incorrect";
 
+// Grapheme-safe splitter (uses Intl.Segmenter when available)
+export const splitGraphemes = (s: string): string[] => {
+  if (!s) return [];
+  const Seg = (Intl as any)?.Segmenter;
+  if (Seg) {
+    try {
+      return [...new Seg("ja", { granularity: "grapheme" }).segment(s)].map((x: any) => x.segment);
+    } catch {
+      // fall through
+    }
+  }
+  return Array.from(s);
+};
+
 export function buildGrid(puzzle: PuzzleData) {
-  const grid: (string | null)[][] = Array.from({ length: puzzle.gridSize }, () =>
-    Array(puzzle.gridSize).fill(null)
-  );
-  const numbers: (number | null)[][] = Array.from({ length: puzzle.gridSize }, () =>
-    Array(puzzle.gridSize).fill(null)
-  );
+  const size = Math.max(1, puzzle.gridSize || 0);
+  const grid: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
+  const numbers: (number | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
 
   for (const word of puzzle.words) {
-    for (let i = 0; i < word.word.length; i++) {
+    if (!word?.word && !(word as any)?.letters?.length) continue;
+    const letters = word.letters && word.letters.length ? word.letters : splitGraphemes(word.word || "");
+    for (let i = 0; i < letters.length; i++) {
       const r = word.direction === "across" ? word.row : word.row + i;
       const c = word.direction === "across" ? word.col + i : word.col;
-      if (r < puzzle.gridSize && c < puzzle.gridSize) {
-        grid[r][c] = word.word[i];
+      if (r >= 0 && c >= 0 && r < size && c < size) {
+        grid[r][c] = letters[i];
       }
     }
-    numbers[word.row][word.col] = word.number;
+    if (word.row >= 0 && word.col >= 0 && word.row < size && word.col < size) {
+      numbers[word.row][word.col] = word.number;
+    }
   }
 
   return { grid, numbers };

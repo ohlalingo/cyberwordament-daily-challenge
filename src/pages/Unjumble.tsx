@@ -11,15 +11,17 @@ interface WordState {
 }
 
 export default function Unjumble() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { user } = useAuth();
-  const language = user?.language || "en";
+  // Prefer current UI language over stored user language
+  const lang = language || user?.language || "en";
   const [puzzle, setPuzzle] = useState(sampleUnjumble);
   const TOTAL_TIME = 600;
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasPuzzle, setHasPuzzle] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const requestedId = searchParams.get("puzzleContentId");
 
@@ -30,7 +32,7 @@ export default function Unjumble() {
   );
 
   useEffect(() => {
-    fetch(`${API_BASE}/puzzle/today?lang=${language || "en"}`)
+    fetch(`${API_BASE}/puzzle/today?lang=${lang}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
       .then((data) => {
         const ujArr = Array.isArray(data?.unjumble) ? data.unjumble : data?.unjumble ? [data.unjumble] : [];
@@ -55,7 +57,7 @@ export default function Unjumble() {
         setHasPuzzle(false);
         setLoading(false);
       });
-  }, [language]);
+  }, [lang]);
 
   // Reset state when a new puzzle arrives
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function Unjumble() {
     setWords(q.map(() => ({ userAnswer: "", status: "pending" })));
     setSeconds(TOTAL_TIME);
     setSubmitted(false);
+    setShowCelebration(false);
   }, [(puzzle as any).puzzleContentId]);
 
   useEffect(() => {
@@ -139,6 +142,9 @@ export default function Unjumble() {
     setSubmitted(true);
     const correctCount = nextWords.filter((w) => w.status === "correct").length;
     void handleComplete(correctCount);
+    if (correctCount === questions.length && questions.length > 0) {
+      setShowCelebration(true);
+    }
   };
 
   const questions = (puzzle as any).questions ?? [];
@@ -158,9 +164,9 @@ export default function Unjumble() {
         ) : (
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold font-heading text-foreground">Unjumble</h1>
+            <h1 className="text-xl font-bold font-heading text-foreground">{t("unjumbleTitle")}</h1>
             <p className="text-xs text-muted-foreground">
-              Rearrange the scrambled letters to form the correct word. Enter the word once arranged.
+              {t("unjumbleDesc")}
             </p>
           </div>
           <span className="text-sm font-mono text-muted-foreground">
@@ -176,6 +182,10 @@ export default function Unjumble() {
             <div className="space-y-4">
               {questions.map((word: any, i: number) => {
                 const state = words[i];
+                const hintText =
+                  (language === "ja"
+                    ? word.hintJa ?? word.hint ?? word.clueJa ?? word.clue
+                    : word.hint ?? word.hintJa ?? word.clue ?? word.clueJa) || "Hint not provided.";
                 return (
                   <div
                     key={word.answer}
@@ -190,7 +200,7 @@ export default function Unjumble() {
                   >
                     <div className="mb-3 flex items-center gap-2">
                       <span className="text-xs text-muted-foreground font-body">
-                        {language === "ja" ? word.hintJa : word.hint}
+                        {hintText}
                       </span>
                     </div>
 
@@ -253,6 +263,21 @@ export default function Unjumble() {
           </>
         )}
       </main>
+
+      {showCelebration && (
+        <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50 animate-fade-in">
+          <div className="rounded-xl bg-card border border-border shadow-lg px-6 py-5 text-center space-y-2">
+            <div className="text-3xl">🎉</div>
+            <div className="text-lg font-semibold text-foreground">All answers correct!</div>
+            <button
+              onClick={() => setShowCelebration(false)}
+              className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

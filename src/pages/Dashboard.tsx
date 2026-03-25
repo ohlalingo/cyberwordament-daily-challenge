@@ -8,9 +8,10 @@ import AppHeader from "@/components/AppHeader";
 
 
 export default function Dashboard() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { user } = useAuth();
-  const language = user?.language || "en";
+  // Prefer current UI language; fall back to user preference then English
+  const lang = language || user?.language || "en";
   const navigate = useNavigate();
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [puzzleMeta, setPuzzleMeta] = useState<{
@@ -100,25 +101,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     const api = API_BASE;
-    fetch(`${api}/puzzle/today?lang=${language}`)
+    fetch(`${api}/puzzle/today?lang=${lang}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
       .then((data) => {
-        const cwArr = Array.isArray(data?.crossword) ? data.crossword : data?.crossword ? [data.crossword] : [];
-        const wsArr = Array.isArray(data?.wordsearch) ? data.wordsearch : data?.wordsearch ? [data.wordsearch] : [];
-        const ujArr = Array.isArray(data?.unjumble) ? data.unjumble : data?.unjumble ? [data.unjumble] : [];
+        const cwArrRaw = Array.isArray(data?.crossword) ? data.crossword : data?.crossword ? [data.crossword] : [];
+        const wsArrRaw = Array.isArray(data?.wordsearch) ? data.wordsearch : data?.wordsearch ? [data.wordsearch] : [];
+        const ujArrRaw = Array.isArray(data?.unjumble) ? data.unjumble : data?.unjumble ? [data.unjumble] : [];
+
+        // Keep only puzzles in the requested language to avoid fallback rows showing up
+        const filterLang = (arr: any[]) =>
+          arr.filter((r) => String(r?.language || "").toLowerCase() === lang);
+        const cwArr = filterLang(cwArrRaw);
+        const wsArr = filterLang(wsArrRaw);
+        const ujArr = filterLang(ujArrRaw);
+        const normalize = (c: any) => ({
+          puzzleId: c.puzzleId || c.puzzle_id,
+          puzzleContentId: c.puzzleContentId || c.puzzle_content_id,
+          slot: Number(c.slot ?? 1),
+        });
         const meta = {
-          crossword: cwArr.map((c: any) => ({
-            puzzleId: c.puzzleId || c.puzzle_id,
-            puzzleContentId: c.puzzleContentId || c.puzzle_content_id,
-          })),
-          wordsearch: wsArr.map((c: any) => ({
-            puzzleId: c.puzzleId || c.puzzle_id,
-            puzzleContentId: c.puzzleContentId || c.puzzle_content_id,
-          })),
-          unjumble: ujArr.map((c: any) => ({
-            puzzleId: c.puzzleId || c.puzzle_id,
-            puzzleContentId: c.puzzleContentId || c.puzzle_content_id,
-          })),
+          crossword: cwArr.map(normalize).sort((a, b) => a.slot - b.slot),
+          wordsearch: wsArr.map(normalize).sort((a, b) => a.slot - b.slot),
+          unjumble: ujArr.map(normalize).sort((a, b) => a.slot - b.slot),
         };
         setPuzzleMeta(meta);
         recomputeCompleted(meta);
@@ -126,7 +130,7 @@ export default function Dashboard() {
       .catch(() => {
         setPuzzleMeta({ crossword: [], wordsearch: [], unjumble: [] });
       });
-  }, [language, recomputeCompleted]);
+  }, [lang, recomputeCompleted]);
 
   // Fetch user stats
   useEffect(() => {
@@ -152,7 +156,7 @@ export default function Dashboard() {
           {t("welcomeBack")}, {user?.name}
         </p>
         <p className="mb-8 text-xs text-muted-foreground font-mono text-center">
-          Next puzzle unlocks in{" "}
+          {t("nextPuzzleUnlocks")}{" "}
           {String(timeLeft.hours).padStart(2, "0")}h:
           {String(timeLeft.minutes).padStart(2, "0")}m:
           {String(timeLeft.seconds).padStart(2, "0")}s
@@ -161,17 +165,22 @@ export default function Dashboard() {
         {/* Puzzle type cards (supports multiple slots) */}
         <div className="mb-8 grid gap-4 md:grid-cols-3">
           {puzzleMeta.crossword.map((c, idx) => {
+            const labelNum = c.slot ?? idx + 1;
             const token = `completed_puzzle_${c.puzzleContentId || c.puzzleId}`;
             const isDone = completed[token];
             return (
               <div key={token} className="rounded-lg border border-border bg-card p-5 shadow-sm flex flex-col">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-mono">
-                    {idx + 1}
+                    {labelNum}
                   </span>
-                  <h2 className="text-sm font-semibold font-heading text-foreground">Crossword {idx + 1}</h2>
+                  <h2 className="text-sm font-semibold font-heading text-foreground">
+                    {t("crosswordTitle")}
+                  </h2>
                 </div>
-                <p className="mb-4 text-xs text-muted-foreground font-body flex-1">Fill in the grid using cybersecurity clues.</p>
+                <p className="mb-4 text-xs text-muted-foreground font-body flex-1">
+                  {t("crosswordDesc")}
+                </p>
                 <button
                   onClick={() => navigate(`/puzzle?puzzleContentId=${c.puzzleContentId || c.puzzleId}`)}
                   disabled={isDone}
@@ -186,17 +195,22 @@ export default function Dashboard() {
           })}
 
           {puzzleMeta.wordsearch.map((c, idx) => {
+            const labelNum = c.slot ?? idx + 1;
             const token = `completed_puzzle_${c.puzzleContentId || c.puzzleId}`;
             const isDone = completed[token];
             return (
               <div key={token} className="rounded-lg border border-border bg-card p-5 shadow-sm flex flex-col">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-mono">
-                    {idx + 1}
+                    {labelNum}
                   </span>
-                  <h2 className="text-sm font-semibold font-heading text-foreground">Word Search {idx + 1}</h2>
+                  <h2 className="text-sm font-semibold font-heading text-foreground">
+                    {t("wordSearchTitle")}
+                  </h2>
                 </div>
-                <p className="mb-4 text-xs text-muted-foreground font-body flex-1">Find hidden cybersecurity words in the grid.</p>
+                <p className="mb-4 text-xs text-muted-foreground font-body flex-1">
+                  {t("wordSearchDesc")}
+                </p>
                 <button
                   onClick={() => navigate(`/wordsearch?puzzleContentId=${c.puzzleContentId || c.puzzleId}`)}
                   disabled={isDone}
@@ -211,17 +225,22 @@ export default function Dashboard() {
           })}
 
           {puzzleMeta.unjumble.map((c, idx) => {
+            const labelNum = c.slot ?? idx + 1;
             const token = `completed_puzzle_${c.puzzleContentId || c.puzzleId}`;
             const isDone = completed[token];
             return (
               <div key={token} className="rounded-lg border border-border bg-card p-5 shadow-sm flex flex-col">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-mono">
-                    {idx + 1}
+                    {labelNum}
                   </span>
-                  <h2 className="text-sm font-semibold font-heading text-foreground">Unjumble {idx + 1}</h2>
+                  <h2 className="text-sm font-semibold font-heading text-foreground">
+                    {t("unjumbleTitle")}
+                  </h2>
                 </div>
-                <p className="mb-4 text-xs text-muted-foreground font-body flex-1">Rearrange scrambled letters to form security terms.</p>
+                <p className="mb-4 text-xs text-muted-foreground font-body flex-1">
+                  {t("unjumbleDesc")}
+                </p>
                 <button
                   onClick={() => navigate(`/unjumble?puzzleContentId=${c.puzzleContentId || c.puzzleId}`)}
                   disabled={isDone}
