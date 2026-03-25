@@ -10,10 +10,11 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [region, setRegion] = useState("aej");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    signUp(name, email, password, language);
+    signUp(name, email, password, language, region);
     navigate("/dashboard");
   };
 
@@ -47,6 +48,22 @@ export default function SignUp() {
               >
                 <option value="en">{t("english")}</option>
                 <option value="ja">{t("japanese")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium font-heading text-muted-foreground">
+                {t("region")}
+              </label>
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-body text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="aej">{t("aej")}</option>
+                <option value="americas">{t("americas")}</option>
+                <option value="emea">{t("emea")}</option>
+                <option value="india">{t("india")}</option>
+                <option value="japan">{t("japan")}</option>
               </select>
             </div>
             <div>

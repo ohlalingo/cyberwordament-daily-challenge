@@ -7,12 +7,13 @@ interface User {
   name: string;
   email: string;
   language: string;
+  region?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string, language?: string) => Promise<any>;
-  signUp: (name: string, email: string, password: string, language: string) => void;
+  signUp: (name: string, email: string, password: string, language: string, region?: string) => void;
   signOut: () => void;
   loaded: boolean;
   isHydrated: boolean;
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: parsed.name,
           email: parsed.email,
           language: parsed.language || parsed.region || "en",
+          region: parsed.region,
         };
         setUser(hydrated);
         setLanguage(hydrated.language as Language);
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData = (await res.json()) as User;
       // Honor the currently selected UI language if provided
       userData.language = (language as Language) || (userData.language as Language) || "en";
+      // region comes from backend; keep as-is
       // Persist
       setUser(userData);
       setLanguage(userData.language as Language);
@@ -103,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let persistedName: string | undefined;
       let persistedLang: string | undefined;
       let nameMap: Record<string, string> = {};
+      let persistedRegion: string | undefined;
       if (typeof window !== "undefined") {
         const raw = localStorage.getItem(SESSION_KEY);
         if (raw) {
@@ -111,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (parsed.email === email) {
               persistedName = parsed.name;
               persistedLang = parsed.language;
+              persistedRegion = parsed.region;
             }
           } catch {
             /* ignore corrupt */
@@ -131,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: persistedName || email.split("@")[0],
         email,
         language: language || persistedLang || "en",
+        region: persistedRegion,
       };
       setUser(userData);
       setLanguage(userData.language as Language);
@@ -141,18 +147,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (name: string, email: string, _password: string, language: string) => {
+  const signUp = async (name: string, email: string, _password: string, language: string, region?: string) => {
     try {
       const res = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password: _password, language }),
+        body: JSON.stringify({ name, email, password: _password, language, region }),
       });
       if (!res.ok) {
         throw new Error(`Signup failed: HTTP ${res.status}`);
       }
       const userData = (await res.json()) as User;
       userData.language = (language as Language) || (userData.language as Language) || "en";
+      userData.region = region || userData.region;
       setUser(userData);
       setLanguage(userData.language as Language);
       localStorage.setItem("lang", userData.language);
@@ -164,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.warn("Backend signup failed, falling back to local stub", err);
-      setUser({ id: Date.now(), name, email, language }); // temp id
+      setUser({ id: Date.now(), name, email, language, region }); // temp id
       setLanguage(language as Language);
       localStorage.setItem("lang", language);
       if (typeof window !== "undefined") {
