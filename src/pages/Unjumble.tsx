@@ -100,7 +100,7 @@ export default function Unjumble() {
       console.error("🚨 Missing puzzleContentId — attempt NOT saved");
       return;
     }
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+    const completionKey = `completed_puzzle_${puzzleContentId ?? (puzzle as any)?.puzzleId}`;
     const puzzleId = (puzzle as any)?.puzzleId;
     const timeTaken = TOTAL_TIME - seconds;
     try {

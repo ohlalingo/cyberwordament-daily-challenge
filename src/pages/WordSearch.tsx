@@ -72,7 +72,7 @@ export default function WordSearch() {
       console.error("🚨 Missing puzzleContentId — attempt NOT saved");
       return;
     }
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+    const completionKey = `completed_puzzle_${puzzleContentId ?? (puzzle as any)?.puzzleId}`;
     const puzzleId = (puzzle as any)?.puzzleId;
     try {
       const token = localStorage.getItem("token");

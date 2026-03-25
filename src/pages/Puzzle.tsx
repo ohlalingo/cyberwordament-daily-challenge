@@ -63,7 +63,7 @@ export default function Puzzle() {
       console.error("🚨 Missing puzzleContentId — attempt NOT saved");
       return;
     }
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? puzzleContentId}`;
+    const completionKey = `completed_puzzle_${puzzleContentId ?? (puzzle as any)?.puzzleId}`;
     const puzzleId = (puzzle as any)?.puzzleId;
 
     try {
@@ -198,7 +198,7 @@ export default function Puzzle() {
 
   // If today's puzzle is already completed, bounce back to dashboard
   useEffect(() => {
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleId ?? (puzzle as any)?.puzzleContentId}`;
+    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleContentId ?? (puzzle as any)?.puzzleId}`;
     if (completionKey && localStorage.getItem(completionKey)) {
       navigate("/dashboard", { replace: true });
     }
