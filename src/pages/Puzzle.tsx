@@ -366,7 +366,7 @@ export default function Puzzle() {
           <div>
             <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
             <p className="text-xs text-muted-foreground">
-              {t("crosswordPlayDesc") || t("crosswordDesc")}
+              {t("crosswordPlayDesc")}
             </p>
           </div>
           <div className={`font-mono text-sm font-semibold transition-colors ${timerWarning ? "text-primary animate-pulse" : "text-foreground"}`}>

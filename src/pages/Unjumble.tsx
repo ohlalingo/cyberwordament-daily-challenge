@@ -169,10 +169,12 @@ export default function Unjumble() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
-        {loading ? (
-          <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
-        ) : !hasPuzzle ? (
-          <div className="text-center text-sm text-muted-foreground">No unjumble puzzle available today.</div>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("unjumblePlayDesc")}</p>
+        </div>
+        {loading ? null : !hasPuzzle ? (
+          <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
         ) : (
         <div className="mb-4 flex items-center justify-between">
           <div>

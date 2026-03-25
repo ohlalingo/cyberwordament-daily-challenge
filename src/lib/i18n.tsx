@@ -55,6 +55,9 @@ const translations = {
     crosswordDesc: "Fill in the grid using cybersecurity clues.",
     wordSearchDesc: "Find hidden cybersecurity words in the grid.",
     unjumbleDesc: "Rearrange scrambled letters to form security terms.",
+    wordSearchPlayDesc: "Select hidden cybersecurity terms in the grid. Words may appear forward, backward, or diagonally.",
+    unjumblePlayDesc: "Unscramble the letters to form the correct cybersecurity term for each hint.",
+    crosswordPlayDesc: "Fill every highlighted square using the clues provided. Each clue has a single-word answer.",
   },
   ja: {
     appTitle: "CyberWordament",
@@ -109,6 +112,8 @@ const translations = {
     wordSearchDesc: "グリッドの中に隠されたサイバーセキュリティ用語を探しましょう。",
     unjumbleDesc: "並べ替えてサイバーセキュリティ用語を完成させましょう。",
     crosswordPlayDesc: "ハイライトされたマスをすべて埋めてください。各ヒントには1つの答えがあります。",
+    wordSearchPlayDesc: "グリッド内に隠されたサイバーセキュリティ用語を選択してください。単語は前後・斜めに配置されています。",
+    unjumblePlayDesc: "ヒントを頼りに文字を並べ替えて正しいサイバーセキュリティ用語を完成させてください。",
   },
 } as const;
 
