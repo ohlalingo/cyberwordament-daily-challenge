@@ -112,10 +112,11 @@ export default function WordSearch() {
     if (!selecting || completed || seconds === 0) return;
     setSelecting(false);
 
-    const selectedWord = selection.map(([r, c]) => puzzle.grid[r][c]).join("");
-    const reversed = [...selection].reverse().map(([r, c]) => puzzle.grid[r][c]).join("");
+    const selectedWord = selection.map(([r, c]) => puzzle.grid?.[r]?.[c]).join("");
+    const reversed = [...selection].reverse().map(([r, c]) => puzzle.grid?.[r]?.[c]).join("");
 
-    const match = puzzle.words.find((w) => w.word === selectedWord || w.word === reversed);
+    const wordsArr = Array.isArray(puzzle.words) ? puzzle.words : [];
+    const match = wordsArr.find((w) => w.word === selectedWord || w.word === reversed);
     if (match && !foundWords.has(match.word)) {
       const newCells = new Set<string>();
       const newFound = new Set(foundWords);
@@ -132,7 +133,7 @@ export default function WordSearch() {
       setLastFoundCells(newCells);
       setTimeout(() => setLastFoundCells(new Set()), 600);
 
-      if (newFound.size === puzzle.words.length) {
+      if (newFound.size === wordsArr.length) {
         handleComplete(newFound.size);
         setShowCelebration(true);
       }
@@ -143,7 +144,8 @@ export default function WordSearch() {
   const isSelected = (r: number, c: number) => selection.some(([sr, sc]) => sr === r && sc === c);
   const isHighlighted = (r: number, c: number) => highlightedCells.has(coordKey(r, c));
   const isJustFound = (r: number, c: number) => lastFoundCells.has(coordKey(r, c));
-  const allFound = foundWords.size === puzzle.words.length;
+  const wordsArray = Array.isArray(puzzle.words) ? puzzle.words : [];
+  const allFound = foundWords.size === wordsArray.length;
 
   const getCellDelay = (ri: number, ci: number) => (ri * puzzle.gridSize + ci) * 15;
 
@@ -160,24 +162,33 @@ export default function WordSearch() {
   }, [seconds, completed, foundWords.size, handleComplete]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/puzzle/today?lang=${lang}`)
+    const url = `${API_BASE}/puzzle/today?lang=${lang}&t=${Date.now()}`;
+    fetch(url, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
       .then((data) => {
-        const wsArr = Array.isArray(data?.wordsearch) ? data.wordsearch : data?.wordsearch ? [data.wordsearch] : [];
-        if (wsArr[0]) {
-          const chosen = requestedId
-            ? wsArr.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
-            : wsArr[0];
-          const ws = {
-            ...chosen,
-            puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
-          };
-          setPuzzle(ws);
-          setHasPuzzle(true);
-        } else {
+        const wordsearch = data?.wordsearch?.[0];
+        if (!wordsearch || !Array.isArray(wordsearch.grid) || !Array.isArray(wordsearch.words)) {
           setHasPuzzle(false);
+          return;
         }
-        setLoading(false);
+        const chosen =
+          (requestedId
+            ? Array.isArray(data?.wordsearch)
+              ? data.wordsearch.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
+              : null
+            : null) || wordsearch;
+        if (!Array.isArray(chosen?.grid) || !Array.isArray(chosen?.words)) {
+          setHasPuzzle(false);
+          return;
+        }
+        const ws = {
+          ...chosen,
+          grid: chosen.grid,
+          words: chosen.words,
+          puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
+        };
+        setPuzzle(ws);
+        setHasPuzzle(true);
       })
       .catch((err) => {
         console.error("🚨 Wordsearch fetch FAILED:", err);
@@ -188,7 +199,7 @@ export default function WordSearch() {
 
   // Reset state when a new puzzle loads
   useEffect(() => {
-    if (!puzzle?.grid) return;
+    if (!puzzle?.grid || !Array.isArray(puzzle.words)) return;
     setFoundWords(new Set());
     setHighlightedCells(new Set());
     setLastFoundCells(new Set());
@@ -200,7 +211,8 @@ export default function WordSearch() {
 
   if (
     !puzzle?.grid ||
-    puzzle.grid.length !== puzzle.gridSize
+    puzzle.grid.length !== puzzle.gridSize ||
+    !Array.isArray(puzzle.words)
   ) {
     return (
       <div className="text-center p-4">

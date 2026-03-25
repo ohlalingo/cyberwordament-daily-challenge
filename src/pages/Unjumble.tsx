@@ -32,32 +32,44 @@ export default function Unjumble() {
   );
 
   useEffect(() => {
-    fetch(`${API_BASE}/puzzle/today?lang=${lang}`)
+    const url = `${API_BASE}/puzzle/today?lang=${lang}&t=${Date.now()}`;
+    fetch(url, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
       .then((data) => {
-        const ujArr = Array.isArray(data?.unjumble) ? data.unjumble : data?.unjumble ? [data.unjumble] : [];
-        if (ujArr[0]) {
-          const chosen = requestedId
-            ? ujArr.find((u: any) => String(u.puzzleContentId ?? u.puzzle_content_id) === requestedId)
-            : ujArr[0];
-          const uq = {
-            ...chosen,
-            questions: chosen.questions ?? chosen.words ?? [],
-            puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
-          };
-          setPuzzle(uq);
-          setHasPuzzle(true);
-        } else {
-          setHasPuzzle(false);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("🚨 Unjumble fetch FAILED:", err);
-        setHasPuzzle(false);
-        setLoading(false);
-      });
-  }, [lang]);
+    const unj = data?.unjumble?.[0];
+    if (!unj) {
+      setHasPuzzle(false);
+      return;
+    }
+    const chosen =
+      (requestedId
+        ? Array.isArray(data?.unjumble)
+          ? data.unjumble.find((u: any) => String(u.puzzleContentId ?? u.puzzle_content_id) === requestedId)
+          : null
+        : null) || unj;
+    const questions = Array.isArray(chosen?.questions)
+      ? chosen.questions
+      : Array.isArray(chosen?.words)
+      ? chosen.words
+      : [];
+    if (!questions.length) {
+      setHasPuzzle(false);
+      return;
+    }
+    const uq = {
+      ...chosen,
+      questions,
+      puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
+    };
+    setPuzzle(uq);
+    setHasPuzzle(true);
+  })
+  .catch((err) => {
+    console.error("🚨 Unjumble fetch FAILED:", err);
+    setHasPuzzle(false);
+    setLoading(false);
+  });
+}, [lang]);
 
   // Reset state when a new puzzle arrives
   useEffect(() => {
@@ -147,7 +159,7 @@ export default function Unjumble() {
     }
   };
 
-  const questions = (puzzle as any).questions ?? [];
+  const questions = Array.isArray((puzzle as any).questions) ? (puzzle as any).questions : [];
   const correctCount = words.filter((w) => w.status === "correct").length;
   const allCorrect = submitted && questions.length > 0 && correctCount === questions.length;
 

@@ -112,7 +112,8 @@ export default function Puzzle() {
     if (!isHydrated) return;
     const preferredLang = lang || "en";
 
-    fetch(`${API_BASE}/puzzle/today?lang=${preferredLang}&t=${Date.now()}`)
+    const url = `${API_BASE}/puzzle/today?lang=${preferredLang}&t=${Date.now()}`;
+    fetch(url, { cache: "no-store" })
       .then((res) => {
         if (res.status === 401) {
           signOut();
@@ -123,13 +124,18 @@ export default function Puzzle() {
         return res.json();
       })
       .then((data) => {
-        const crossArr = Array.isArray(data?.crossword) ? data.crossword : data?.crossword ? [data.crossword] : [];
-        const first = crossArr[0];
-        if (first) {
-        const chosen = requestedId
-          ? crossArr.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
-          : first;
-        // Normalize gridSize and ensure words are present
+        const crossword = data?.crossword?.[0];
+        if (!crossword) {
+          console.warn("Puzzle fetch succeeded but no crossword in payload");
+          setHasPuzzle(false);
+          return;
+        }
+        const chosen =
+          (requestedId
+            ? Array.isArray(data?.crossword)
+              ? data.crossword.find((c: any) => String(c.puzzleContentId ?? c.puzzle_content_id) === requestedId)
+              : null
+            : null) || crossword;
         const normalizedGridSize = Math.max(
           Number(chosen.gridSize) || 0,
           ...((chosen.words || []).map((w: any) => {
@@ -139,38 +145,35 @@ export default function Puzzle() {
             return Math.max(endRow + 1, endCol + 1);
           }))
         );
+        const words = (chosen.words || [])
+          .filter((w: any) => w && w.word && w.direction && w.row !== undefined && w.col !== undefined)
+          .map((w: any) => {
+            const letters = splitGraphemes(String(w.word ?? ""));
+            return {
+              ...w,
+              clue: w.clue ?? w.hint ?? "",
+              clueJa: w.clueJa ?? w.hintJa ?? w.clue ?? w.hint ?? "",
+              row: Number(w.row ?? 0),
+              col: Number(w.col ?? 0),
+              word: String(w.word ?? ""),
+              letters,
+              direction: w.direction === "down" ? "down" : "across",
+              number: Number(w.number ?? 0) || 0,
+            };
+          });
+        if (!words.length) {
+          console.warn("Crossword payload missing words");
+          setHasPuzzle(false);
+          return;
+        }
         const cw = {
           ...chosen,
           puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
-          gridSize: normalizedGridSize || 10, // fallback to 10 if still unknown
-          // Normalize word fields so UI always has clue/clueJa even if API sends hint/hintJa
-          words: (chosen.words || [])
-            .filter((w: any) => {
-              if (!w || !w.word || !w.direction) return false;
-              const hasCoords = w.row !== undefined && w.col !== undefined;
-              return hasCoords;
-            })
-            .map((w: any) => {
-              const letters = splitGraphemes(String(w.word ?? ""));
-              return {
-                ...w,
-                clue: w.clue ?? w.hint ?? "",
-                clueJa: w.clueJa ?? w.hintJa ?? w.clue ?? w.hint ?? "",
-                row: Number(w.row ?? 0),
-                col: Number(w.col ?? 0),
-                word: String(w.word ?? ""),
-                letters,
-                direction: w.direction === "down" ? "down" : "across",
-                number: Number(w.number ?? 0) || 0,
-              };
-            }),
+          gridSize: normalizedGridSize || 10,
+          words,
         };
-          setPuzzle(cw);
-          setHasPuzzle(true);
-        } else {
-          console.warn("Puzzle fetch succeeded but no crossword in payload");
-          setHasPuzzle(false);
-        }
+        setPuzzle(cw);
+        setHasPuzzle(true);
       })
       .catch((err) => {
         console.warn("Puzzle fetch failed:", err);
