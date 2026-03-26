@@ -27,6 +27,7 @@ export default function Puzzle() {
     Array.from({ length: puzzle.gridSize || 0 }, () => Array(puzzle.gridSize || 0).fill("empty"))
   );
   const [submitted, setSubmitted] = useState(false);
+  const isComposing = useRef(false);
   const TOTAL_TIME = 600;
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [bouncingCell, setBouncingCell] = useState<string | null>(null);
@@ -221,10 +222,23 @@ export default function Puzzle() {
     [puzzle.words]
   );
 
+  const normalizeChar = (value: string) => {
+    const last = splitGraphemes(value).pop() ?? "";
+    return /^[A-Za-z]$/.test(last) ? last.toUpperCase() : last;
+  };
+
   const handleCellChange = useCallback(
     (row: number, col: number, value: string) => {
       if (submitted || grid[row][col] === null) return;
-      const char = value.toUpperCase().slice(-1);
+      if (isComposing.current) {
+        setUserInput((prev) => {
+          const next = prev.map((r) => [...r]);
+          next[row][col] = value;
+          return next;
+        });
+        return;
+      }
+      const char = normalizeChar(value);
       setUserInput((prev) => {
         const next = prev.map((r) => [...r]);
         next[row][col] = char;
@@ -423,6 +437,8 @@ export default function Puzzle() {
                         maxLength={1}
                         value={userInput[ri][ci]}
                         onChange={(e) => handleCellChange(ri, ci, e.target.value)}
+                        onCompositionStart={() => { isComposing.current = true; }}
+                        onCompositionEnd={(e) => { isComposing.current = false; handleCellChange(ri, ci, e.currentTarget.value); }}
                         onKeyDown={(e) => handleKeyDown(ri, ci, e)}
                         onFocus={() => handleCellFocus(ri, ci)}
                         disabled={submitted}

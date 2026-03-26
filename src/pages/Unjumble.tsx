@@ -138,8 +138,10 @@ export default function Unjumble() {
   };
 
   const updateAnswer = useCallback((index: number, value: string) => {
+    const normalized =
+      /^[A-Za-z]+$/.test(value) ? value.toUpperCase() : value;
     setWords((prev) =>
-      prev.map((w, i) => (i === index ? { ...w, userAnswer: value.toUpperCase() } : w))
+      prev.map((w, i) => (i === index ? { ...w, userAnswer: normalized } : w))
     );
   }, []);
 
