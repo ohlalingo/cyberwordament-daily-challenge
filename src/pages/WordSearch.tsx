@@ -169,6 +169,7 @@ export default function WordSearch() {
         const wordsearch = data?.wordsearch?.[0];
         if (!wordsearch || !Array.isArray(wordsearch.grid) || !Array.isArray(wordsearch.words)) {
           setHasPuzzle(false);
+          setLoading(false);
           return;
         }
         const chosen =
@@ -179,6 +180,7 @@ export default function WordSearch() {
             : null) || wordsearch;
         if (!Array.isArray(chosen?.grid) || !Array.isArray(chosen?.words)) {
           setHasPuzzle(false);
+          setLoading(false);
           return;
         }
         const ws = {
@@ -189,6 +191,7 @@ export default function WordSearch() {
         };
         setPuzzle(ws);
         setHasPuzzle(true);
+        setLoading(false);
       })
       .catch((err) => {
         console.error("🚨 Wordsearch fetch FAILED:", err);
@@ -227,25 +230,20 @@ export default function WordSearch() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
-          <p className="text-sm text-muted-foreground">{t("wordSearchPlayDesc")}</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}: {t("wordSearchTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("wordSearchPlayDesc")}</p>
+          </div>
+          {!loading && hasPuzzle && (
+            <div className="text-sm font-mono text-muted-foreground">
+              {foundWords.size}/{puzzle.words.length} found • {Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
+            </div>
+          )}
         </div>
         {loading ? null : !hasPuzzle ? (
           <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
-        ) : (
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold font-heading text-foreground">{t("wordSearchTitle")}</h1>
-            <p className="text-xs text-muted-foreground">
-              {t("wordSearchDesc")}
-            </p>
-          </div>
-          <div className="text-sm font-mono text-muted-foreground">
-            {foundWords.size}/{puzzle.words.length} found • {Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
-          </div>
-        </div>
-        )}
+        ) : null}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grid */}
@@ -311,20 +309,48 @@ export default function WordSearch() {
           </div>
         </div>
 
-        {showCelebration && (
-          <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50 animate-fade-in">
-            <div className="rounded-xl bg-card border border-border shadow-lg px-6 py-5 text-center space-y-2">
-              <div className="text-3xl">🎉</div>
-              <div className="text-lg font-semibold text-foreground">All words found!</div>
-              <button
-                onClick={() => setShowCelebration(false)}
-                className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90"
-              >
-                Close
-              </button>
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => { handleComplete(foundWords.size); setShowCelebration(true); }}
+            disabled={completed}
+            className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+          >
+            Submit
+          </button>
+        </div>
+
+        {showCelebration && (() => {
+          const totalWords = wordsArray.length;
+          const isPerfect = foundWords.size === totalWords;
+          return (
+            <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50 animate-fade-in">
+              <div className="rounded-xl bg-card border border-border shadow-lg px-8 py-6 text-center space-y-4 animate-celebrate">
+                <div className="flex justify-center gap-2">
+                  {["🎉", "⭐", "🏆", "✨", "🎊"].map((emoji, i) => (
+                    <span key={i} className="text-3xl animate-confetti-fall"
+                      style={{ animationDelay: `${i * 150}ms`, animationDuration: `${1 + i * 0.2}s` }}>
+                      {emoji}
+                    </span>
+                  ))}
+                </div>
+                <h2 className="text-2xl font-bold font-heading text-foreground">
+                  {isPerfect ? "Perfect Score!" : "Puzzle Complete"}
+                </h2>
+                <p className="text-4xl font-bold text-primary">{foundWords.size} / {totalWords}</p>
+                <p className="text-sm text-muted-foreground">words found</p>
+                <p className="text-sm text-muted-foreground">
+                  Time: {Math.floor((TOTAL_TIME - seconds) / 60)}:{((TOTAL_TIME - seconds) % 60).toString().padStart(2, "0")}
+                </p>
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );

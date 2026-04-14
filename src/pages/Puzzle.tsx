@@ -28,6 +28,8 @@ export default function Puzzle() {
   );
   const [submitted, setSubmitted] = useState(false);
   const isComposing = useRef(false);
+  const justComposed = useRef(false);
+  const composingValue = useRef("");
   const TOTAL_TIME = 600;
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [bouncingCell, setBouncingCell] = useState<string | null>(null);
@@ -227,10 +229,53 @@ export default function Puzzle() {
     return /^[A-Za-z]$/.test(last) ? last.toUpperCase() : last;
   };
 
+  const advanceCursor = useCallback(
+    (row: number, col: number, dir: "across" | "down") => {
+      if (dir === "down") {
+        for (let nr = row + 1; nr < puzzle.gridSize; nr++) {
+          if (grid[nr]?.[col] !== null) {
+            setSelectedCell([nr, col]);
+            inputRefs.current[nr]?.[col]?.focus();
+            return [nr, col] as [number, number];
+          }
+        }
+      } else {
+        for (let nc = col + 1; nc < puzzle.gridSize; nc++) {
+          if (grid[row]?.[nc] !== null) {
+            setSelectedCell([row, nc]);
+            inputRefs.current[row]?.[nc]?.focus();
+            return [row, nc] as [number, number];
+          }
+        }
+      }
+      return [row, col] as [number, number];
+    },
+    [grid, puzzle.gridSize]
+  );
+
+  const getWordDir = useCallback(
+    (row: number, col: number): "across" | "down" => {
+      const activeWord = puzzle.words.find((w) => w.number === activeClue) ??
+        puzzle.words.find((w) => {
+          for (let i = 0; i < w.word.length; i++) {
+            const r = w.direction === "across" ? w.row : w.row + i;
+            const c = w.direction === "across" ? w.col + i : w.col;
+            if (r === row && c === col) return true;
+          }
+          return false;
+        });
+      return activeWord?.direction ?? "across";
+    },
+    [puzzle.words, activeClue]
+  );
+
   const handleCellChange = useCallback(
     (row: number, col: number, value: string) => {
       if (submitted || grid[row][col] === null) return;
+      // Skip the onChange that fires immediately after compositionEnd (already handled)
+      if (justComposed.current) return;
       if (isComposing.current) {
+        // Show intermediate romaji/kana in cell so user sees what they're typing
         setUserInput((prev) => {
           const next = prev.map((r) => [...r]);
           next[row][col] = value;
@@ -244,22 +289,56 @@ export default function Puzzle() {
         next[row][col] = char;
         return next;
       });
-      // Bounce animation on type
       if (char) {
         setBouncingCell(`${row},${col}`);
         setTimeout(() => setBouncingCell(null), 200);
-        requestAnimationFrame(() => {
-          for (let nc = col + 1; nc < puzzle.gridSize; nc++) {
-            if (grid[row]?.[nc] !== null) {
-              setSelectedCell([row, nc]);
-              inputRefs.current[row]?.[nc]?.focus();
-              break;
-            }
-          }
-        });
+        requestAnimationFrame(() => advanceCursor(row, col, getWordDir(row, col)));
       }
     },
-    [submitted, grid, puzzle.gridSize]
+    [submitted, grid, advanceCursor, getWordDir]
+  );
+
+  const handleCompositionEnd = useCallback(
+    (row: number, col: number, value: string) => {
+      isComposing.current = false;
+      composingValue.current = "";
+      justComposed.current = true;
+      setTimeout(() => { justComposed.current = false; }, 0);
+      if (submitted || grid[row][col] === null) return;
+      // Distribute each grapheme into consecutive cells
+      const chars = splitGraphemes(value).filter((c) => c.trim());
+      if (!chars.length) return;
+      const dir = getWordDir(row, col);
+      let lastR = row, lastC = col;
+      setUserInput((prev) => {
+        const next = prev.map((r) => [...r]);
+        let r = row, c = col;
+        for (let i = 0; i < chars.length; i++) {
+          if (grid[r]?.[c] === null) break;
+          next[r][c] = chars[i];
+          lastR = r; lastC = c;
+          if (i < chars.length - 1) {
+            if (dir === "down") {
+              let found = false;
+              for (let nr = r + 1; nr < puzzle.gridSize; nr++) {
+                if (grid[nr]?.[c] !== null) { r = nr; found = true; break; }
+              }
+              if (!found) break;
+            } else {
+              let found = false;
+              for (let nc = c + 1; nc < puzzle.gridSize; nc++) {
+                if (grid[r]?.[nc] !== null) { c = nc; found = true; break; }
+              }
+              if (!found) break;
+            }
+          }
+        }
+        return next;
+      });
+      // Advance from the LAST filled cell, not the start cell
+      requestAnimationFrame(() => advanceCursor(lastR, lastC, dir));
+    },
+    [submitted, grid, puzzle.gridSize, advanceCursor, getWordDir]
   );
 
   const handleKeyDown = useCallback(
@@ -328,9 +407,7 @@ export default function Puzzle() {
     // Save attempt
     void handlePuzzleComplete(correctWordCount);
 
-    if (allCorrect) {
-      setTimeout(() => setShowCelebration(true), delay + 300);
-    }
+    setTimeout(() => setShowCelebration(true), delay + 300);
   };
 
   const acrossClues = puzzle.words.filter((w) => w.direction === "across");
@@ -373,21 +450,20 @@ export default function Puzzle() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
-        {loading ? (
-          <div className="text-center text-sm text-muted-foreground">Loading puzzle...</div>
-        ) : (
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
-            <p className="text-xs text-muted-foreground">
-              {t("crosswordPlayDesc")}
-            </p>
+            <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}: {t("crosswordTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("crosswordPlayDesc")}</p>
           </div>
-          <div className={`font-mono text-sm font-semibold transition-colors ${timerWarning ? "text-primary animate-pulse" : "text-foreground"}`}>
-            {t("timeRemaining")}: {formatTime(seconds)}
-          </div>
+          {!loading && hasPuzzle && (
+            <div className={`font-mono text-sm font-semibold transition-colors ${timerWarning ? "text-primary animate-pulse" : "text-foreground"}`}>
+              {t("timeRemaining")}: {formatTime(seconds)}
+            </div>
+          )}
         </div>
-        )}
+        {loading ? null : !hasPuzzle ? (
+          <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
+        ) : null}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grid */}
@@ -434,11 +510,11 @@ export default function Puzzle() {
                       <input
                         ref={(el) => { inputRefs.current[ri][ci] = el; }}
                         type="text"
-                        maxLength={1}
                         value={userInput[ri][ci]}
                         onChange={(e) => handleCellChange(ri, ci, e.target.value)}
-                        onCompositionStart={() => { isComposing.current = true; }}
-                        onCompositionEnd={(e) => { isComposing.current = false; handleCellChange(ri, ci, e.currentTarget.value); }}
+                        onCompositionStart={() => { isComposing.current = true; composingValue.current = ""; }}
+                        onCompositionUpdate={(e) => { composingValue.current = e.currentTarget.value; }}
+                        onCompositionEnd={(e) => handleCompositionEnd(ri, ci, composingValue.current || e.currentTarget.value)}
                         onKeyDown={(e) => handleKeyDown(ri, ci, e)}
                         onFocus={() => handleCellFocus(ri, ci)}
                         disabled={submitted}
@@ -499,34 +575,47 @@ export default function Puzzle() {
           </button>
         </div>
 
-        {/* Celebration overlay */}
-        {showCelebration && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="animate-celebrate text-center space-y-4">
-              <div className="flex justify-center gap-2">
-                {["🎉", "⭐", "🏆", "✨", "🎊"].map((emoji, i) => (
-                  <span
-                    key={i}
-                    className="text-4xl animate-confetti-fall"
-                    style={{ animationDelay: `${i * 150}ms`, animationDuration: `${1 + i * 0.2}s` }}
-                  >
-                    {emoji}
-                  </span>
-                ))}
+        {/* Score overlay — shown after every submission */}
+        {showCelebration && (() => {
+          const totalWords = puzzle.words.length;
+          const correctCount = puzzle.words.filter((word) => {
+            const letters = (word as any).letters ?? splitGraphemes(word.word);
+            return letters.every((ch: string, i: number) => {
+              const r = word.direction === "across" ? word.row : word.row + i;
+              const c = word.direction === "across" ? word.col + i : word.col;
+              return userInput[r]?.[c] === ch;
+            });
+          }).length;
+          const isPerfect = correctCount === totalWords;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <div className="rounded-xl bg-card border border-border shadow-lg px-8 py-6 text-center space-y-4 animate-celebrate">
+                <div className="flex justify-center gap-2">
+                  {["🎉", "⭐", "🏆", "✨", "🎊"].map((emoji, i) => (
+                    <span key={i} className="text-3xl animate-confetti-fall"
+                      style={{ animationDelay: `${i * 150}ms`, animationDuration: `${1 + i * 0.2}s` }}>
+                      {emoji}
+                    </span>
+                  ))}
+                </div>
+                <h2 className="text-2xl font-bold font-heading text-foreground">
+                  {isPerfect ? "Perfect Score!" : "Puzzle Complete"}
+                </h2>
+                <p className="text-4xl font-bold text-primary">{correctCount} / {totalWords}</p>
+                <p className="text-sm text-muted-foreground">words correct</p>
+                <p className="text-sm text-muted-foreground font-body">
+                  Time: {formatTime(TOTAL_TIME - seconds)}
+                </p>
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  Close
+                </button>
               </div>
-              <h2 className="text-2xl font-bold font-heading text-foreground">Perfect Score!</h2>
-              <p className="text-sm text-muted-foreground font-body">
-                Completed in {formatTime(600 - seconds)}
-              </p>
-              <button
-                onClick={() => setShowCelebration(false)}
-                className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
-              >
-                Close
-              </button>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );

@@ -39,6 +39,7 @@ export default function Unjumble() {
     const unj = data?.unjumble?.[0];
     if (!unj) {
       setHasPuzzle(false);
+      setLoading(false);
       return;
     }
     const chosen =
@@ -54,6 +55,7 @@ export default function Unjumble() {
       : [];
     if (!questions.length) {
       setHasPuzzle(false);
+      setLoading(false);
       return;
     }
     const uq = {
@@ -63,6 +65,7 @@ export default function Unjumble() {
     };
     setPuzzle(uq);
     setHasPuzzle(true);
+    setLoading(false);
   })
   .catch((err) => {
     console.error("🚨 Unjumble fetch FAILED:", err);
@@ -156,9 +159,7 @@ export default function Unjumble() {
     setSubmitted(true);
     const correctCount = nextWords.filter((w) => w.status === "correct").length;
     void handleComplete(correctCount);
-    if (correctCount === questions.length && questions.length > 0) {
-      setShowCelebration(true);
-    }
+    setShowCelebration(true);
   };
 
   const questions = Array.isArray((puzzle as any).questions) ? (puzzle as any).questions : [];
@@ -171,25 +172,20 @@ export default function Unjumble() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}</h1>
-          <p className="text-sm text-muted-foreground">{t("unjumblePlayDesc")}</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}: {t("unjumbleTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("unjumblePlayDesc")}</p>
+          </div>
+          {!loading && hasPuzzle && (
+            <span className="text-sm font-mono text-muted-foreground">
+              {submitted ? `${correctCount}/${questions.length} correct • ` : ""}{Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
+            </span>
+          )}
         </div>
         {loading ? null : !hasPuzzle ? (
           <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
-        ) : (
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold font-heading text-foreground">{t("unjumbleTitle")}</h1>
-            <p className="text-xs text-muted-foreground">
-              {t("unjumbleDesc")}
-            </p>
-          </div>
-          <span className="text-sm font-mono text-muted-foreground">
-            {submitted ? `${correctCount}/${questions.length} correct • ` : ""}{Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, "0")}
-          </span>
-        </div>
-        )}
+        ) : null}
 
         {!questions.length ? (
           <div className="text-center p-4">No puzzle available</div>
@@ -269,31 +265,43 @@ export default function Unjumble() {
               </button>
             </div>
 
-            {allCorrect && (
-              <div className="mt-6 animate-celebrate text-center">
-                <div className="rounded-lg bg-success/10 p-4 text-success font-semibold">
-                  🎉 Perfect! All words unscrambled!
-                </div>
-              </div>
-            )}
           </>
         )}
       </main>
 
-      {showCelebration && (
-        <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50 animate-fade-in">
-          <div className="rounded-xl bg-card border border-border shadow-lg px-6 py-5 text-center space-y-2">
-            <div className="text-3xl">🎉</div>
-            <div className="text-lg font-semibold text-foreground">All answers correct!</div>
-            <button
-              onClick={() => setShowCelebration(false)}
-              className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90"
-            >
-              Close
-            </button>
+      {showCelebration && (() => {
+        const totalWords = questions.length;
+        const correct = words.filter((w) => w.status === "correct").length;
+        const isPerfect = correct === totalWords;
+        return (
+          <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50 animate-fade-in">
+            <div className="rounded-xl bg-card border border-border shadow-lg px-8 py-6 text-center space-y-4 animate-celebrate">
+              <div className="flex justify-center gap-2">
+                {["🎉", "⭐", "🏆", "✨", "🎊"].map((emoji, i) => (
+                  <span key={i} className="text-3xl animate-confetti-fall"
+                    style={{ animationDelay: `${i * 150}ms`, animationDuration: `${1 + i * 0.2}s` }}>
+                    {emoji}
+                  </span>
+                ))}
+              </div>
+              <h2 className="text-2xl font-bold font-heading text-foreground">
+                {isPerfect ? "Perfect Score!" : "Puzzle Complete"}
+              </h2>
+              <p className="text-4xl font-bold text-primary">{correct} / {totalWords}</p>
+              <p className="text-sm text-muted-foreground">words correct</p>
+              <p className="text-sm text-muted-foreground">
+                Time: {Math.floor((TOTAL_TIME - seconds) / 60)}:{((TOTAL_TIME - seconds) % 60).toString().padStart(2, "0")}
+              </p>
+              <button
+                onClick={() => setShowCelebration(false)}
+                className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90"
+              >
+                Close
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
