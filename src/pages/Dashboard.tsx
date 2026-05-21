@@ -15,9 +15,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [puzzleMeta, setPuzzleMeta] = useState<{
-    crossword: { puzzleId?: number; puzzleContentId?: number }[];
-    wordsearch: { puzzleId?: number; puzzleContentId?: number }[];
-    unjumble: { puzzleId?: number; puzzleContentId?: number }[];
+    crossword: { puzzleId?: number; puzzleContentId?: number; slot?: number }[];
+    wordsearch: { puzzleId?: number; puzzleContentId?: number; slot?: number }[];
+    unjumble: { puzzleId?: number; puzzleContentId?: number; slot?: number }[];
   }>({ crossword: [], wordsearch: [], unjumble: [] });
   const [stats, setStats] = useState<{ puzzlesCompleted: number; currentStreak: number; bestTimeSeconds: number | null }>({
     puzzlesCompleted: 0,
