@@ -169,11 +169,21 @@ export default function Puzzle() {
           setHasPuzzle(false);
           return;
         }
+        const givens = Array.isArray((chosen as any)?.givens)
+          ? (chosen as any).givens
+              .map((g: any) => ({
+                row: Number(g.row),
+                col: Number(g.col),
+                letter: String(g.letter ?? ""),
+              }))
+              .filter((g: any) => Number.isFinite(g.row) && Number.isFinite(g.col) && g.letter)
+          : [];
         const cw = {
           ...chosen,
           puzzleContentId: chosen.puzzleContentId ?? chosen.puzzle_content_id,
           gridSize: normalizedGridSize || 10,
           words,
+          givens,
         };
         setPuzzle(cw);
         setHasPuzzle(true);
@@ -190,22 +200,49 @@ export default function Puzzle() {
   // Reset grid-dependent state whenever we load a fresh puzzle (size/content may change).
   useEffect(() => {
     const size = puzzle.gridSize;
-    setUserInput(Array.from({ length: size }, () => Array(size).fill("")));
-    setCellStates(Array.from({ length: size }, () => Array(size).fill("empty")));
+    const fresh: string[][] = Array.from({ length: size }, () => Array(size).fill(""));
+    for (const g of puzzle.givens ?? []) {
+      if (g.row >= 0 && g.row < size && g.col >= 0 && g.col < size) {
+        fresh[g.row][g.col] = g.letter;
+      }
+    }
+    // If this puzzle was already completed, fill cells with correct answers and show as submitted
+    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleContentId ?? (puzzle as any)?.puzzleId}`;
+    const wasCompleted = Boolean(localStorage.getItem(completionKey));
+    if (wasCompleted) {
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (grid[r]?.[c] !== null && grid[r]?.[c] !== undefined) {
+            fresh[r][c] = grid[r][c] as string;
+          }
+        }
+      }
+    }
+    setUserInput(fresh);
+    const initialCellStates = Array.from({ length: size }, () => Array(size).fill("empty")) as CellState[][];
+    if (wasCompleted) {
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (grid[r]?.[c] !== null && grid[r]?.[c] !== undefined) {
+            initialCellStates[r][c] = "correct";
+          }
+        }
+      }
+    }
+    setCellStates(initialCellStates);
     setSelectedCell(null);
     setActiveClue(null);
-    setSubmitted(false);
+    setSubmitted(wasCompleted);
     setSeconds(TOTAL_TIME);
     setShowCelebration(false);
-  }, [puzzle.puzzleContentId, puzzle.gridSize, TOTAL_TIME]);
+  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.givens, grid, TOTAL_TIME]);
 
-  // If today's puzzle is already completed, bounce back to dashboard
-  useEffect(() => {
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleContentId ?? (puzzle as any)?.puzzleId}`;
-    if (completionKey && localStorage.getItem(completionKey)) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [navigate, (puzzle as any).puzzleId, (puzzle as any).puzzleContentId]);
+  const givenSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const g of puzzle.givens ?? []) s.add(`${g.row},${g.col}`);
+    return s;
+  }, [puzzle.givens]);
+  const isGiven = (r: number, c: number) => givenSet.has(`${r},${c}`);
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -272,6 +309,7 @@ export default function Puzzle() {
   const handleCellChange = useCallback(
     (row: number, col: number, value: string) => {
       if (submitted || grid[row][col] === null) return;
+      if (givenSet.has(`${row},${col}`)) return;
       // Skip the onChange that fires immediately after compositionEnd (already handled)
       if (justComposed.current) return;
       if (isComposing.current) {
@@ -295,7 +333,7 @@ export default function Puzzle() {
         requestAnimationFrame(() => advanceCursor(row, col, getWordDir(row, col)));
       }
     },
-    [submitted, grid, advanceCursor, getWordDir]
+    [submitted, grid, advanceCursor, getWordDir, givenSet]
   );
 
   const handleCompositionEnd = useCallback(
@@ -315,8 +353,10 @@ export default function Puzzle() {
         let r = row, c = col;
         for (let i = 0; i < chars.length; i++) {
           if (grid[r]?.[c] === null) break;
-          next[r][c] = chars[i];
-          lastR = r; lastC = c;
+          if (!givenSet.has(`${r},${c}`)) {
+            next[r][c] = chars[i];
+            lastR = r; lastC = c;
+          }
           if (i < chars.length - 1) {
             if (dir === "down") {
               let found = false;
@@ -338,7 +378,7 @@ export default function Puzzle() {
       // Advance from the LAST filled cell, not the start cell
       requestAnimationFrame(() => advanceCursor(lastR, lastC, dir));
     },
-    [submitted, grid, puzzle.gridSize, advanceCursor, getWordDir]
+    [submitted, grid, puzzle.gridSize, advanceCursor, getWordDir, givenSet]
   );
 
   const handleKeyDown = useCallback(
@@ -518,7 +558,12 @@ export default function Puzzle() {
                         onKeyDown={(e) => handleKeyDown(ri, ci, e)}
                         onFocus={() => handleCellFocus(ri, ci)}
                         disabled={submitted}
-                        className="h-full w-full bg-transparent text-center font-mono text-sm font-bold text-foreground focus:outline-none uppercase"
+                        readOnly={isGiven(ri, ci)}
+                        className={`h-full w-full text-center font-mono text-sm font-bold focus:outline-none uppercase ${
+                          isGiven(ri, ci)
+                            ? "bg-muted text-muted-foreground cursor-default"
+                            : "bg-transparent text-foreground"
+                        }`}
                         aria-label={`Cell ${ri + 1}, ${ci + 1}`}
                       />
                     </div>

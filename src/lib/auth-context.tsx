@@ -13,7 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string, language?: string) => Promise<any>;
-  signUp: (name: string, email: string, password: string, language: string, region?: string) => void;
+  signUp: (name: string, email: string, password: string, language: string, region?: string) => Promise<void>;
   signOut: () => void;
   loaded: boolean;
   isHydrated: boolean;
@@ -74,112 +74,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const signIn = async (email: string, password: string, language = "en") => {
-    // Prefer backend auth to pull real name/language
-    try {
-      const res = await fetch(`${API_BASE}/auth/signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        throw new Error(`Signin failed: HTTP ${res.status}`);
-      }
-      const userData = (await res.json()) as User;
-      // Honor the currently selected UI language if provided
-      userData.language = (language as Language) || (userData.language as Language) || "en";
-      // region comes from backend; keep as-is
-      // Persist
-      setUser(userData);
-      setLanguage(userData.language as Language);
-      localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
-      localStorage.setItem("lang", userData.language);
-      if (typeof window !== "undefined") {
-        const mapRaw = localStorage.getItem(NAME_MAP_KEY);
-        const map = mapRaw ? (JSON.parse(mapRaw) || {}) : {};
-        map[email] = userData.name;
-        localStorage.setItem(NAME_MAP_KEY, JSON.stringify(map));
-      }
-      return userData;
-    } catch (err) {
-      // Fallback to local stub if backend unreachable
-      console.warn("Backend signin failed, falling back to local stub", err);
-      let persistedName: string | undefined;
-      let persistedLang: string | undefined;
-      let nameMap: Record<string, string> = {};
-      let persistedRegion: string | undefined;
-      if (typeof window !== "undefined") {
-        const raw = localStorage.getItem(SESSION_KEY);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (parsed.email === email) {
-              persistedName = parsed.name;
-              persistedLang = parsed.language;
-              persistedRegion = parsed.region;
-            }
-          } catch {
-            /* ignore corrupt */
-          }
-        }
-        const mapRaw = localStorage.getItem(NAME_MAP_KEY);
-        if (mapRaw) {
-          try {
-            nameMap = JSON.parse(mapRaw) || {};
-            if (nameMap[email]) persistedName = persistedName || nameMap[email];
-          } catch {
-            /* ignore corrupt */
-          }
-        }
-      }
-      const userData: User = {
-        id: Date.now(),
-        name: persistedName || email.split("@")[0],
-        email,
-        language: language || persistedLang || "en",
-        region: persistedRegion,
-      };
-      setUser(userData);
-      setLanguage(userData.language as Language);
-      localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
-      localStorage.setItem("lang", userData.language);
-      localStorage.setItem(NAME_MAP_KEY, JSON.stringify({ ...nameMap, [email]: userData.name }));
-      return userData;
+    const res = await fetch(`${API_BASE}/auth/signin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(body?.error || `Signin failed: HTTP ${res.status}`);
     }
+
+    const userData = body as User;
+    userData.language = (language as Language) || (userData.language as Language) || "en";
+    setUser(userData);
+    setLanguage(userData.language as Language);
+    localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
+    localStorage.setItem("lang", userData.language);
+    if (typeof window !== "undefined") {
+      const mapRaw = localStorage.getItem(NAME_MAP_KEY);
+      const map = mapRaw ? (JSON.parse(mapRaw) || {}) : {};
+      map[email] = userData.name;
+      localStorage.setItem(NAME_MAP_KEY, JSON.stringify(map));
+    }
+    return userData;
   };
 
-  const signUp = async (name: string, email: string, _password: string, language: string, region?: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password: _password, language, region }),
-      });
-      if (!res.ok) {
-        throw new Error(`Signup failed: HTTP ${res.status}`);
-      }
-      const userData = (await res.json()) as User;
-      userData.language = (language as Language) || (userData.language as Language) || "en";
-      userData.region = region || userData.region;
-      setUser(userData);
-      setLanguage(userData.language as Language);
-      localStorage.setItem("lang", userData.language);
-      if (typeof window !== "undefined") {
-        const mapRaw = localStorage.getItem(NAME_MAP_KEY);
-        const map = mapRaw ? (JSON.parse(mapRaw) || {}) : {};
-        map[email] = userData.name;
-        localStorage.setItem(NAME_MAP_KEY, JSON.stringify(map));
-      }
-    } catch (err) {
-      console.warn("Backend signup failed, falling back to local stub", err);
-      setUser({ id: Date.now(), name, email, language, region }); // temp id
-      setLanguage(language as Language);
-      localStorage.setItem("lang", language);
-      if (typeof window !== "undefined") {
-        const mapRaw = localStorage.getItem(NAME_MAP_KEY);
-        const map = mapRaw ? (JSON.parse(mapRaw) || {}) : {};
-        map[email] = name;
-        localStorage.setItem(NAME_MAP_KEY, JSON.stringify(map));
-      }
+  const signUp = async (name: string, email: string, password: string, language: string, region?: string) => {
+    const res = await fetch(`${API_BASE}/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, language, region }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(body?.error || `Signup failed: HTTP ${res.status}`);
+    }
+
+    const userData = body as User;
+    userData.language = (language as Language) || (userData.language as Language) || "en";
+    userData.region = region || userData.region;
+    setUser(userData);
+    setLanguage(userData.language as Language);
+    localStorage.setItem("lang", userData.language);
+    if (typeof window !== "undefined") {
+      const mapRaw = localStorage.getItem(NAME_MAP_KEY);
+      const map = mapRaw ? (JSON.parse(mapRaw) || {}) : {};
+      map[email] = userData.name;
+      localStorage.setItem(NAME_MAP_KEY, JSON.stringify(map));
     }
   };
 

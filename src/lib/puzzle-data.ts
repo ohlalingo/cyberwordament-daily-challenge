@@ -9,6 +9,12 @@ export interface PuzzleWord {
   letters?: string[]; // optional pre-split graphemes
 }
 
+export interface PuzzleGiven {
+  row: number;
+  col: number;
+  letter: string;
+}
+
 export interface PuzzleData {
   puzzle_id: string;
   puzzleContentId?: number;
@@ -17,6 +23,7 @@ export interface PuzzleData {
   type: "crossword" | "wordsearch" | "unjumble";
   words: PuzzleWord[];
   gridSize: number;
+  givens?: PuzzleGiven[];
 }
 
 // Grid layout (10x10):

@@ -183,9 +183,8 @@ export default function Dashboard() {
                 </p>
                 <button
                   onClick={() => navigate(`/puzzle?puzzleContentId=${c.puzzleContentId || c.puzzleId}`)}
-                  disabled={isDone}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold font-heading w-full transition-opacity ${
-                    isDone ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:opacity-90"
+                    isDone ? "bg-muted text-foreground hover:opacity-90" : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
                   {isDone ? t("completed").replace(/^./, (ch) => ch.toUpperCase()) : t("startPuzzle")}
@@ -213,9 +212,8 @@ export default function Dashboard() {
                 </p>
                 <button
                   onClick={() => navigate(`/wordsearch?puzzleContentId=${c.puzzleContentId || c.puzzleId}`)}
-                  disabled={isDone}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold font-heading w-full transition-opacity ${
-                    isDone ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:opacity-90"
+                    isDone ? "bg-muted text-foreground hover:opacity-90" : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
                   {isDone ? t("completed").replace(/^./, (ch) => ch.toUpperCase()) : t("startPuzzle")}
@@ -243,9 +241,8 @@ export default function Dashboard() {
                 </p>
                 <button
                   onClick={() => navigate(`/unjumble?puzzleContentId=${c.puzzleContentId || c.puzzleId}`)}
-                  disabled={isDone}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold font-heading w-full transition-opacity ${
-                    isDone ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:opacity-90"
+                    isDone ? "bg-muted text-foreground hover:opacity-90" : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
                   {isDone ? t("completed").replace(/^./, (ch) => ch.toUpperCase()) : t("startPuzzle")}
