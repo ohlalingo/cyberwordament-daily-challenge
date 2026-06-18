@@ -22,9 +22,9 @@ export default function SignUp() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 h-8 text-2xl font-extrabold text-primary">CyberWordament</div>
+        <div className="mx-auto mb-4 h-8 text-2xl font-extrabold text-primary">CyberMaze</div>
           <div className="flex justify-center gap-[2px]">
-            {"CYBERWORDAMENT".split("").map((letter, i) => (
+            {"CYBERMAZE".split("").map((letter, i) => (
               <div
                 key={i}
                 className="flex h-6 w-[17px] items-center justify-center rounded-sm border border-primary font-mono text-[11px] font-bold text-primary"

@@ -29,9 +29,9 @@ export default function AppHeader() {
             </button>
           )}
           <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
-            <span className="text-lg font-extrabold text-primary">CW</span>
+            <span className="text-lg font-extrabold text-primary">CM</span>
             <div className="flex gap-[1px]">
-              {"CYBERWORDAMENT".split("").map((letter, i) => (
+              {"CYBERMAZE".split("").map((letter, i) => (
                 <div
                   key={i}
                   className="flex h-4 w-[13px] items-center justify-center rounded-[2px] border border-primary font-mono text-[8px] font-bold text-primary"

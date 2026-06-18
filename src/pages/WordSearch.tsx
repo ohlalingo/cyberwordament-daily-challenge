@@ -19,6 +19,7 @@ export default function WordSearch() {
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [completed, setCompleted] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasPuzzle, setHasPuzzle] = useState(false);
 
@@ -311,13 +312,40 @@ export default function WordSearch() {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => { handleComplete(foundWords.size); setShowCelebration(true); }}
+            onClick={() => setShowConfirmSubmit(true)}
             disabled={completed}
             className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
           >
-            Submit
+            {t("submit")}
           </button>
         </div>
+
+        {showConfirmSubmit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
+              <h3 className="mb-2 text-lg font-bold font-heading text-foreground">
+                {t("confirmSubmitTitle")}
+              </h3>
+              <p className="mb-6 text-sm text-muted-foreground font-body">
+                {t("confirmSubmitDesc")}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmSubmit(false)}
+                  className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-semibold font-heading text-foreground hover:bg-muted transition-colors"
+                >
+                  {t("takeMeBack")}
+                </button>
+                <button
+                  onClick={() => { setShowConfirmSubmit(false); handleComplete(foundWords.size); setShowCelebration(true); }}
+                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  {t("lockIt")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showCelebration && (() => {
           const totalWords = wordsArray.length;

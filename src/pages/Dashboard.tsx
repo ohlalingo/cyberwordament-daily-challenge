@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Sparkles,
+  Info,
 } from "lucide-react";
 
 type PuzzleKind = "crossword" | "wordsearch" | "unjumble";
@@ -289,9 +290,6 @@ export default function Dashboard() {
                     >
                       {isDone ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                     </div>
-                    <span className="rounded-md border border-border bg-background px-2 py-0.5 font-mono text-[10px] font-bold text-muted-foreground">
-                      #{p.slot}
-                    </span>
                   </div>
 
                   <h3 className="mb-1 font-heading text-base font-semibold text-foreground">
@@ -341,6 +339,39 @@ export default function Dashboard() {
                   <div className="font-mono text-2xl font-bold text-foreground tabular-nums">{stat.value}</div>
                   <div className="text-xs text-muted-foreground font-heading">{stat.label}</div>
                 </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* How it works (block grid) */}
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 font-heading text-base font-semibold text-foreground">
+            <Info className="h-4 w-4 text-primary" />
+            {t("howCyberMazeWorks")}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { Icon: Sparkles, title: t("rulesOnePuzzleTitle"), body: t("rulesOnePuzzleBody") },
+              { Icon: Clock, title: t("rulesResetTitle"), body: t("rulesResetBody") },
+              { Icon: Clock, title: t("rulesTimerTitle"), body: t("rulesTimerBody") },
+              { Icon: CheckCircle2, title: t("rulesReviewTitle"), body: t("rulesReviewBody") },
+              { Icon: Grid3x3, title: t("rulesHintsTitle"), body: t("rulesHintsBody") },
+              { Icon: Trophy, title: t("rulesPlayDailyTitle"), body: t("rulesPlayDailyBody") },
+            ].map(({ Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-border bg-card p-5 shadow-sm"
+              >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="mb-1 font-heading text-sm font-semibold text-foreground">
+                  {title}
+                </h3>
+                <p className="text-xs text-muted-foreground font-body leading-relaxed">
+                  {body}
+                </p>
               </div>
             ))}
           </div>

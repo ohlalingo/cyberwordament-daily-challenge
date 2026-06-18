@@ -34,7 +34,9 @@ export default function Puzzle() {
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [bouncingCell, setBouncingCell] = useState<string | null>(null);
   const [activeClue, setActiveClue] = useState<number | null>(null);
+  const preferredDirRef = useRef<"across" | "down">("across");
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[][]>(
     Array.from({ length: puzzle.gridSize }, () => Array(puzzle.gridSize).fill(null))
   );
@@ -83,6 +85,7 @@ export default function Puzzle() {
           puzzleContentId,
           correctWords,
           timeTaken,
+          userInput,
         }),
       });
 
@@ -113,6 +116,7 @@ export default function Puzzle() {
 
   // Sync completion state from the backend (works across browsers/devices).
   const [serverCompletedIds, setServerCompletedIds] = useState<Set<number>>(new Set());
+  const [savedUserInput, setSavedUserInput] = useState<string[][] | null>(null);
   useEffect(() => {
     if (!user?.id) return;
     fetch(`${API_BASE}/attempt/user/${user.id}/completed`)
@@ -126,6 +130,19 @@ export default function Puzzle() {
       })
       .catch(() => { /* silent */ });
   }, [user?.id]);
+
+  // If this puzzle was completed before, fetch the user's actual saved answers
+  useEffect(() => {
+    const pcId = Number((puzzle as any)?.puzzleContentId);
+    if (!user?.id || !pcId) return;
+    if (!serverCompletedIds.has(pcId)) return;
+    fetch(`${API_BASE}/attempt/user/${user.id}/puzzle/${pcId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.userInput)) setSavedUserInput(data.userInput);
+      })
+      .catch(() => { /* silent */ });
+  }, [user?.id, (puzzle as any).puzzleContentId, serverCompletedIds]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -222,7 +239,7 @@ export default function Puzzle() {
         fresh[g.row][g.col] = g.letter;
       }
     }
-    // If this puzzle was already completed (either via localStorage or backend sync), fill cells with correct answers and show as submitted
+    // If this puzzle was already completed, show user's saved answers (if any) or fall back to correct answers
     const thisId = Number((puzzle as any)?.puzzleContentId ?? (puzzle as any)?.puzzleId);
     const completionKey = `completed_puzzle_${thisId}`;
     const wasCompleted = Boolean(localStorage.getItem(completionKey)) || serverCompletedIds.has(thisId);
@@ -230,7 +247,15 @@ export default function Puzzle() {
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           if (grid[r]?.[c] !== null && grid[r]?.[c] !== undefined) {
-            fresh[r][c] = grid[r][c] as string;
+            const savedCell = savedUserInput?.[r]?.[c];
+            if (savedUserInput && typeof savedCell === "string") {
+              fresh[r][c] = savedCell;
+            } else if (!savedUserInput) {
+              // No saved input yet (legacy attempt) → fall back to the correct letter so the review still makes sense
+              fresh[r][c] = grid[r][c] as string;
+            } else {
+              fresh[r][c] = "";
+            }
           }
         }
       }
@@ -241,7 +266,7 @@ export default function Puzzle() {
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           if (grid[r]?.[c] !== null && grid[r]?.[c] !== undefined) {
-            initialCellStates[r][c] = "correct";
+            initialCellStates[r][c] = fresh[r][c] === (grid[r][c] as string) ? "correct" : "incorrect";
           }
         }
       }
@@ -252,7 +277,7 @@ export default function Puzzle() {
     setSubmitted(wasCompleted);
     setSeconds(TOTAL_TIME);
     setShowCelebration(false);
-  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.givens, grid, serverCompletedIds, TOTAL_TIME]);
+  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.givens, grid, serverCompletedIds, savedUserInput, TOTAL_TIME]);
 
   const givenSet = useMemo(() => {
     const s = new Set<string>();
@@ -266,16 +291,29 @@ export default function Puzzle() {
   // Find which clue a cell belongs to
   const findClueForCell = useCallback(
     (row: number, col: number) => {
-      for (const word of puzzle.words) {
-        for (let i = 0; i < word.word.length; i++) {
-          const r = word.direction === "across" ? word.row : word.row + i;
-          const c = word.direction === "across" ? word.col + i : word.col;
-          if (r === row && c === col) return word.number;
+      const cellInWord = (w: typeof puzzle.words[number]) => {
+        for (let i = 0; i < w.word.length; i++) {
+          const r = w.direction === "across" ? w.row : w.row + i;
+          const c = w.direction === "across" ? w.col + i : w.col;
+          if (r === row && c === col) return true;
         }
+        return false;
+      };
+      // If the currently active clue still contains this cell, keep it — preserves the
+      // user's typing direction when the cursor moves across an intersection.
+      if (activeClue != null) {
+        const current = puzzle.words.find((w) => w.number === activeClue);
+        if (current && cellInWord(current)) return activeClue;
       }
-      return null;
+      // Otherwise pick a word containing this cell, preferring the user's preferred direction.
+      const preferred = preferredDirRef.current;
+      const other: "across" | "down" = preferred === "across" ? "down" : "across";
+      const preferredWord = puzzle.words.find((w) => w.direction === preferred && cellInWord(w));
+      if (preferredWord) return preferredWord.number;
+      const otherWord = puzzle.words.find((w) => w.direction === other && cellInWord(w));
+      return otherWord?.number ?? null;
     },
-    [puzzle.words]
+    [puzzle.words, activeClue]
   );
 
   const normalizeChar = (value: string) => {
@@ -573,6 +611,14 @@ export default function Puzzle() {
                         onCompositionUpdate={(e) => { composingValue.current = e.currentTarget.value; }}
                         onCompositionEnd={(e) => handleCompositionEnd(ri, ci, composingValue.current || e.currentTarget.value)}
                         onKeyDown={(e) => handleKeyDown(ri, ci, e)}
+                        onClick={() => {
+                          // If clicking the same cell, toggle preferred direction
+                          if (selectedCell && selectedCell[0] === ri && selectedCell[1] === ci) {
+                            preferredDirRef.current = preferredDirRef.current === "across" ? "down" : "across";
+                            setActiveClue(null); // force findClueForCell to use the new preferred direction
+                            requestAnimationFrame(() => handleCellFocus(ri, ci));
+                          }
+                        }}
                         onFocus={() => handleCellFocus(ri, ci)}
                         disabled={submitted}
                         readOnly={isGiven(ri, ci)}
@@ -598,8 +644,21 @@ export default function Puzzle() {
                 {acrossClues.map((w) => (
                   <li
                     key={w.number}
-                    className={`text-sm font-mono text-foreground rounded px-2 py-1 transition-all duration-300 ${
-                      activeClue === w.number ? "animate-clue-glow bg-primary/5 border-l-2 border-primary pl-3" : "border-l-2 border-transparent"
+                    onClick={() => {
+                      preferredDirRef.current = "across";
+                      setActiveClue(w.number);
+                      // Jump to the first non-given cell of the word
+                      let tr = w.row, tc = w.col;
+                      for (let i = 0; i < w.word.length; i++) {
+                        const cr = w.row;
+                        const cc = w.col + i;
+                        if (!givenSet.has(`${cr},${cc}`)) { tr = cr; tc = cc; break; }
+                      }
+                      setSelectedCell([tr, tc]);
+                      requestAnimationFrame(() => inputRefs.current[tr]?.[tc]?.focus());
+                    }}
+                    className={`cursor-pointer text-sm font-mono text-foreground rounded px-2 py-1 transition-all duration-300 ${
+                      activeClue === w.number ? "animate-clue-glow bg-primary/5 border-l-2 border-primary pl-3" : "border-l-2 border-transparent hover:bg-muted/50"
                     }`}
                   >
                     <span className="text-muted-foreground mr-2">{w.number}.</span>
@@ -614,8 +673,21 @@ export default function Puzzle() {
                 {downClues.map((w) => (
                   <li
                     key={w.number}
-                    className={`text-sm font-mono text-foreground rounded px-2 py-1 transition-all duration-300 ${
-                      activeClue === w.number ? "animate-clue-glow bg-primary/5 border-l-2 border-primary pl-3" : "border-l-2 border-transparent"
+                    onClick={() => {
+                      preferredDirRef.current = "down";
+                      setActiveClue(w.number);
+                      // Jump to the first non-given cell of the word
+                      let tr = w.row, tc = w.col;
+                      for (let i = 0; i < w.word.length; i++) {
+                        const cr = w.row + i;
+                        const cc = w.col;
+                        if (!givenSet.has(`${cr},${cc}`)) { tr = cr; tc = cc; break; }
+                      }
+                      setSelectedCell([tr, tc]);
+                      requestAnimationFrame(() => inputRefs.current[tr]?.[tc]?.focus());
+                    }}
+                    className={`cursor-pointer text-sm font-mono text-foreground rounded px-2 py-1 transition-all duration-300 ${
+                      activeClue === w.number ? "animate-clue-glow bg-primary/5 border-l-2 border-primary pl-3" : "border-l-2 border-transparent hover:bg-muted/50"
                     }`}
                   >
                     <span className="text-muted-foreground mr-2">{w.number}.</span>
@@ -629,13 +701,59 @@ export default function Puzzle() {
 
         <div className="mt-6 text-center">
           <button
-            onClick={handleSubmit}
+            onClick={() => setShowConfirmSubmit(true)}
             disabled={submitted}
             className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
           >
             {t("submit")}
           </button>
         </div>
+
+        {/* How to play (below submit) */}
+        <section className="mt-10">
+          <h2 className="mb-4 font-heading text-base font-semibold text-foreground">{t("howToPlay")}</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { title: t("howClueTitle"), body: t("howClueBody") },
+              { title: t("howGridTitle"), body: t("howGridBody") },
+              { title: t("howSwitchTitle"), body: t("howSwitchBody") },
+              { title: t("howHintsTitle"), body: t("howHintsBody") },
+              { title: t("howSubmitTitle"), body: t("howSubmitBody") },
+            ].map((b) => (
+              <div key={b.title} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                <h3 className="mb-1 font-heading text-sm font-semibold text-foreground">{b.title}</h3>
+                <p className="text-xs text-muted-foreground font-body leading-relaxed">{b.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {showConfirmSubmit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
+              <h3 className="mb-2 text-lg font-bold font-heading text-foreground">
+                {t("confirmSubmitTitle")}
+              </h3>
+              <p className="mb-6 text-sm text-muted-foreground font-body">
+                {t("confirmSubmitDesc")}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmSubmit(false)}
+                  className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-semibold font-heading text-foreground hover:bg-muted transition-colors"
+                >
+                  {t("takeMeBack")}
+                </button>
+                <button
+                  onClick={() => { setShowConfirmSubmit(false); handleSubmit(); }}
+                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  {t("lockIt")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Score overlay — shown after every submission */}
         {showCelebration && (() => {

@@ -22,6 +22,7 @@ export default function Unjumble() {
   const [loading, setLoading] = useState(true);
   const [hasPuzzle, setHasPuzzle] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const requestedId = searchParams.get("puzzleContentId");
 
@@ -257,15 +258,42 @@ export default function Unjumble() {
 
             <div className="mt-6 text-center">
               <button
-                onClick={handleSubmit}
+                onClick={() => setShowConfirmSubmit(true)}
                 disabled={submitted}
                 className="rounded-lg bg-primary px-8 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
               >
-                Submit
+                {t("submit")}
               </button>
             </div>
 
           </>
+        )}
+
+        {showConfirmSubmit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
+              <h3 className="mb-2 text-lg font-bold font-heading text-foreground">
+                {t("confirmSubmitTitle")}
+              </h3>
+              <p className="mb-6 text-sm text-muted-foreground font-body">
+                {t("confirmSubmitDesc")}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmSubmit(false)}
+                  className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-semibold font-heading text-foreground hover:bg-muted transition-colors"
+                >
+                  {t("takeMeBack")}
+                </button>
+                <button
+                  onClick={() => { setShowConfirmSubmit(false); handleSubmit(); }}
+                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold font-heading text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  {t("lockIt")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
 
