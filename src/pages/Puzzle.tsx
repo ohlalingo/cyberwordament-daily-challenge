@@ -111,6 +111,22 @@ export default function Puzzle() {
     }
   };
 
+  // Sync completion state from the backend (works across browsers/devices).
+  const [serverCompletedIds, setServerCompletedIds] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${API_BASE}/attempt/user/${user.id}/completed`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const ids: number[] = Array.isArray(data?.completedPuzzleContentIds)
+          ? data.completedPuzzleContentIds
+          : [];
+        ids.forEach((id) => localStorage.setItem(`completed_puzzle_${id}`, "true"));
+        setServerCompletedIds(new Set(ids));
+      })
+      .catch(() => { /* silent */ });
+  }, [user?.id]);
+
   useEffect(() => {
     if (!isHydrated) return;
     const preferredLang = lang || "en";
@@ -206,9 +222,10 @@ export default function Puzzle() {
         fresh[g.row][g.col] = g.letter;
       }
     }
-    // If this puzzle was already completed, fill cells with correct answers and show as submitted
-    const completionKey = `completed_puzzle_${(puzzle as any)?.puzzleContentId ?? (puzzle as any)?.puzzleId}`;
-    const wasCompleted = Boolean(localStorage.getItem(completionKey));
+    // If this puzzle was already completed (either via localStorage or backend sync), fill cells with correct answers and show as submitted
+    const thisId = Number((puzzle as any)?.puzzleContentId ?? (puzzle as any)?.puzzleId);
+    const completionKey = `completed_puzzle_${thisId}`;
+    const wasCompleted = Boolean(localStorage.getItem(completionKey)) || serverCompletedIds.has(thisId);
     if (wasCompleted) {
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
@@ -235,7 +252,7 @@ export default function Puzzle() {
     setSubmitted(wasCompleted);
     setSeconds(TOTAL_TIME);
     setShowCelebration(false);
-  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.givens, grid, TOTAL_TIME]);
+  }, [puzzle.puzzleContentId, puzzle.gridSize, puzzle.givens, grid, serverCompletedIds, TOTAL_TIME]);
 
   const givenSet = useMemo(() => {
     const s = new Set<string>();

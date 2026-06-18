@@ -81,6 +81,24 @@ export default function Dashboard() {
     setCompleted(next);
   }, []);
 
+  // Sync completion state from the backend so it persists across browsers/cache-clears.
+  // Writes to localStorage so the rest of the app (which still reads it) stays in sync.
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${API_BASE}/attempt/user/${user.id}/completed`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+      .then((data) => {
+        const ids: number[] = Array.isArray(data?.completedPuzzleContentIds)
+          ? data.completedPuzzleContentIds
+          : [];
+        ids.forEach((id) => {
+          localStorage.setItem(`completed_puzzle_${id}`, "true");
+        });
+        window.dispatchEvent(new Event("storage"));
+      })
+      .catch((err) => console.warn("Failed to sync completed puzzles", err));
+  }, [user?.id, puzzleMeta]);
+
   useEffect(() => {
     const onStorage = () => recomputeCompleted(puzzleMeta);
     const onCompletedEvent = (e: Event) => {
