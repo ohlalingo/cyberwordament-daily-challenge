@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import AppHeader from "@/components/AppHeader";
@@ -10,6 +11,7 @@ type Coord = [number, number];
 export default function WordSearch() {
   const { t, language } = useI18n();
   const { user } = useAuth();
+  const navigate = useNavigate();
   // Prefer current UI language over stored user language
   const lang = language || user?.language || "en";
   const [puzzle, setPuzzle] = useState(sampleWordSearch);
@@ -231,6 +233,12 @@ export default function WordSearch() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-muted-foreground hover:text-primary transition-colors"
+        >
+          ← {t("backToHome")}
+        </button>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold font-heading text-foreground">{t("todaysPuzzle")}: {t("wordSearchTitle")}</h1>
