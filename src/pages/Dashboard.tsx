@@ -376,6 +376,13 @@ export default function Dashboard() {
             ))}
           </div>
         </section>
+
+        {/* Stale-data hint */}
+        <footer className="mt-10 text-center">
+          <p className="text-xs text-muted-foreground font-body italic">
+            {t("staleHint")}
+          </p>
+        </footer>
       </main>
     </div>
   );
