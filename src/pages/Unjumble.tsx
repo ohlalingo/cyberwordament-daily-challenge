@@ -274,6 +274,24 @@ export default function Unjumble() {
               </button>
             </div>
 
+            {/* How to play */}
+            <section className="mt-10">
+              <h2 className="mb-4 font-heading text-base font-semibold text-foreground">{t("howToPlay")}</h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { title: t("ujHowReadTitle"), body: t("ujHowReadBody") },
+                  { title: t("ujHowHintTitle"), body: t("ujHowHintBody") },
+                  { title: t("ujHowTypeTitle"), body: t("ujHowTypeBody") },
+                  { title: t("ujHowSubmitTitle"), body: t("ujHowSubmitBody") },
+                ].map((b) => (
+                  <div key={b.title} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                    <h3 className="mb-1 font-heading text-sm font-semibold text-foreground">{b.title}</h3>
+                    <p className="text-xs text-muted-foreground font-body leading-relaxed">{b.body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
           </>
         )}
 

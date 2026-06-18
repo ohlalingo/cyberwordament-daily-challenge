@@ -344,13 +344,31 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* How it works (block grid) */}
-        <section className="mt-10">
-          <h2 className="mb-4 flex items-center gap-2 font-heading text-base font-semibold text-foreground">
-            <Info className="h-4 w-4 text-primary" />
-            {t("howCyberMazeWorks")}
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Divider */}
+        <div className="my-12 flex items-center gap-4">
+          <div className="h-px flex-1 bg-border" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {t("rules")}
+          </span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        {/* How it works (contrasting block) */}
+        <section className="rounded-2xl bg-muted/40 p-6 sm:p-8">
+          <div className="mb-6 flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Info className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="font-heading text-base font-semibold text-foreground">
+                {t("howCyberMazeWorks")}
+              </h2>
+              <p className="text-xs text-muted-foreground font-body">
+                {t("howCyberMazeWorksSub")}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { Icon: Sparkles, title: t("rulesOnePuzzleTitle"), body: t("rulesOnePuzzleBody") },
               { Icon: Clock, title: t("rulesResetTitle"), body: t("rulesResetBody") },
@@ -361,10 +379,10 @@ export default function Dashboard() {
             ].map(({ Icon, title, body }) => (
               <div
                 key={title}
-                className="rounded-xl border border-border bg-card p-5 shadow-sm"
+                className="rounded-xl border border-border bg-background p-4"
               >
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="h-4 w-4" />
                 </div>
                 <h3 className="mb-1 font-heading text-sm font-semibold text-foreground">
                   {title}

@@ -328,6 +328,24 @@ export default function WordSearch() {
           </button>
         </div>
 
+        {/* How to play */}
+        <section className="mt-10">
+          <h2 className="mb-4 font-heading text-base font-semibold text-foreground">{t("howToPlay")}</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { title: t("wsHowFindTitle"), body: t("wsHowFindBody") },
+              { title: t("wsHowSelectTitle"), body: t("wsHowSelectBody") },
+              { title: t("wsHowListTitle"), body: t("wsHowListBody") },
+              { title: t("wsHowSubmitTitle"), body: t("wsHowSubmitBody") },
+            ].map((b) => (
+              <div key={b.title} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                <h3 className="mb-1 font-heading text-sm font-semibold text-foreground">{b.title}</h3>
+                <p className="text-xs text-muted-foreground font-body leading-relaxed">{b.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {showConfirmSubmit && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm animate-fade-in">
             <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
