@@ -1,13 +1,19 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, Language } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
 export default function AppHeader() {
-  const { t } = useI18n();
+  const { t, language, setLanguage } = useI18n();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const toggleLanguage = () => {
+    const next: Language = language === "ja" ? "en" : "ja";
+    setLanguage(next);
+    try { localStorage.setItem("lang", next); } catch { /* ignore */ }
+  };
 
   const navItems = [
     { key: "todaysPuzzle" as const, path: "/puzzle" },
@@ -57,19 +63,33 @@ export default function AppHeader() {
             ))}
           </nav>
         </div>
-        {user && (
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold font-heading">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <button
-              onClick={() => { signOut(); navigate("/"); }}
-              className="text-xs text-muted-foreground hover:text-foreground font-heading"
-            >
-              {t("signOut")}
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Language toggle */}
+          <button
+            onClick={toggleLanguage}
+            aria-label="Toggle language"
+            title={language === "ja" ? "Switch to English" : "日本語に切り替え"}
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-background px-2.5 text-xs font-heading font-semibold text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+          >
+            <span className={language === "en" ? "text-primary" : ""}>EN</span>
+            <span className="text-border">/</span>
+            <span className={language === "ja" ? "text-primary" : ""}>日本語</span>
+          </button>
+
+          {user && (
+            <>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold font-heading">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <button
+                onClick={() => { signOut(); navigate("/"); }}
+                className="text-xs text-muted-foreground hover:text-foreground font-heading"
+              >
+                {t("signOut")}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
