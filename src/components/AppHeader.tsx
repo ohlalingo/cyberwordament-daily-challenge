@@ -12,7 +12,16 @@ export default function AppHeader() {
   const toggleLanguage = () => {
     const next: Language = language === "ja" ? "en" : "ja";
     setLanguage(next);
-    try { localStorage.setItem("lang", next); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("lang", next);
+      // Also update the saved user object so AuthContext.hydrate doesn't override us on reload
+      const raw = localStorage.getItem("auth_user");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.language = next;
+        localStorage.setItem("auth_user", JSON.stringify(parsed));
+      }
+    } catch { /* ignore */ }
   };
 
   const navItems = [

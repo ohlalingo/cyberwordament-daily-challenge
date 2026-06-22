@@ -254,13 +254,13 @@ export default function WordSearch() {
           <div className="text-center text-sm text-muted-foreground">No puzzle available today.</div>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Grid */}
-          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm overflow-x-auto flex justify-center">
             <div
               ref={gridRef}
               className="inline-grid select-none"
-              style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, 1fr)` }}
+              style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, 32px)`, gridAutoRows: "32px" }}
               onMouseLeave={endSelect}
             >
               {puzzle.grid.map((row, ri) =>

@@ -19,6 +19,26 @@ export default function Puzzle() {
   const [loading, setLoading] = useState(true);
   const { grid, numbers } = useMemo(() => buildGrid(puzzle), [puzzle]);
 
+  // Bounding box of cells that are actually part of the puzzle — used to trim the rendered grid
+  // so a sparse 20x20 puzzle doesn't show a giant empty 720x720 card.
+  const renderBounds = useMemo(() => {
+    let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < (grid[r]?.length ?? 0); c++) {
+        if (grid[r][c] !== null) {
+          if (r < minR) minR = r;
+          if (r > maxR) maxR = r;
+          if (c < minC) minC = c;
+          if (c > maxC) maxC = c;
+        }
+      }
+    }
+    if (minR === Infinity) {
+      return { minR: 0, maxR: 0, minC: 0, maxC: 0, rows: 1, cols: 1 };
+    }
+    return { minR, maxR, minC, maxC, rows: maxR - minR + 1, cols: maxC - minC + 1 };
+  }, [grid]);
+
   const [userInput, setUserInput] = useState<string[][]>(() =>
     Array.from({ length: puzzle.gridSize || 0 }, () => Array(puzzle.gridSize || 0).fill(""))
   );
@@ -568,12 +588,15 @@ export default function Puzzle() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grid */}
-          <div className="rounded-lg border border-border bg-card p-4 shadow-sm overflow-x-auto">
-            <div className="inline-grid gap-0" style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, 36px)`, gridAutoRows: "36px" }}>
-              {grid.map((row, ri) =>
-                row.map((cell, ci) => {
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm overflow-x-auto flex items-center justify-center">
+            <div className="inline-grid gap-0" style={{ gridTemplateColumns: `repeat(${renderBounds.cols}, 36px)`, gridAutoRows: "36px" }}>
+              {Array.from({ length: renderBounds.rows }, (_, dr) => {
+                const ri = renderBounds.minR + dr;
+                return Array.from({ length: renderBounds.cols }, (_, dc) => {
+                  const ci = renderBounds.minC + dc;
+                  const cell = grid[ri]?.[ci] ?? null;
                   if (cell === null) {
-                    return <div key={`${ri}-${ci}`} className="h-9 w-9" aria-hidden="true" />;
+                    return <div key={`${ri}-${ci}`} className="w-9 h-9 bg-muted/30" aria-hidden="true" />;
                   }
                   const isSelected = selectedCell?.[0] === ri && selectedCell?.[1] === ci;
                   const state = cellStates[ri][ci];
@@ -631,8 +654,8 @@ export default function Puzzle() {
                       />
                     </div>
                   );
-                })
-              )}
+                });
+              })}
             </div>
           </div>
 
@@ -662,7 +685,7 @@ export default function Puzzle() {
                     }`}
                   >
                     <span className="text-muted-foreground mr-2">{w.number}.</span>
-                    {language === "ja" ? w.clueJa : w.clue}
+                    <span className="whitespace-pre-line">{language === "ja" ? w.clueJa : w.clue}</span>
                   </li>
                 ))}
               </ul>
@@ -691,7 +714,7 @@ export default function Puzzle() {
                     }`}
                   >
                     <span className="text-muted-foreground mr-2">{w.number}.</span>
-                    {language === "ja" ? w.clueJa : w.clue}
+                    <span className="whitespace-pre-line">{language === "ja" ? w.clueJa : w.clue}</span>
                   </li>
                 ))}
               </ul>
