@@ -568,18 +568,12 @@ export default function Puzzle() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grid */}
-          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <div className="inline-grid gap-0" style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, 1fr)` }}>
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm overflow-x-auto">
+            <div className="inline-grid gap-0" style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, 36px)`, gridAutoRows: "36px" }}>
               {grid.map((row, ri) =>
                 row.map((cell, ci) => {
                   if (cell === null) {
-                    return (
-                      <div
-                        key={`${ri}-${ci}`}
-                        className="h-9 w-9 bg-background animate-cell-pop"
-                        style={{ animationDelay: `${getCellDelay(ri, ci)}ms` }}
-                      />
-                    );
+                    return <div key={`${ri}-${ci}`} className="h-9 w-9" aria-hidden="true" />;
                   }
                   const isSelected = selectedCell?.[0] === ri && selectedCell?.[1] === ci;
                   const state = cellStates[ri][ci];
