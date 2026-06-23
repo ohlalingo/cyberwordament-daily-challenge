@@ -191,6 +191,11 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-content px-4 pt-20 pb-12">
+        {/* Banner placeholder — replace with <img src="/banner.jpg" /> when ready */}
+        <section className="mb-6 flex aspect-[6/1] w-full items-center justify-center rounded-2xl border border-dashed border-border bg-muted/40 text-sm font-heading text-muted-foreground">
+          Banner image
+        </section>
+
         {/* Hero / status bar */}
         <section className="relative mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div
