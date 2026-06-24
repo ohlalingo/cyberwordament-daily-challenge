@@ -287,7 +287,7 @@ export default function Dashboard() {
                   onClick={() => navigate(`${meta.route}?puzzleContentId=${p.id}`)}
                   className={`group relative flex flex-col rounded-xl border bg-card p-5 text-left shadow-sm transition-all ${
                     isDone
-                      ? "border-border hover:border-primary hover:shadow-md hover:-translate-y-0.5"
+                      ? "border-success/40 hover:border-success hover:shadow-md hover:-translate-y-0.5"
                       : "border-border hover:border-primary hover:shadow-md hover:-translate-y-0.5"
                   }`}
                 >

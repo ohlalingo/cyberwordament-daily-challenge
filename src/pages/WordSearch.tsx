@@ -65,7 +65,7 @@ export default function WordSearch() {
     [selecting, selection, puzzle.gridSize, completed, seconds]
   );
 
-  const handleComplete = useCallback(async (correctWords: number) => {
+  const handleComplete = useCallback(async (correctWords: number, foundList: string[]) => {
     if (completed) return;
     setCompleted(true);
     const timeTaken = TOTAL_TIME - seconds;
@@ -90,6 +90,7 @@ export default function WordSearch() {
           puzzleContentId,
           correctWords,
           timeTaken,
+          userInput: foundList,
         }),
       });
       if (res.ok) {
@@ -137,7 +138,7 @@ export default function WordSearch() {
       setTimeout(() => setLastFoundCells(new Set()), 600);
 
       if (newFound.size === wordsArr.length) {
-        handleComplete(newFound.size);
+        handleComplete(newFound.size, Array.from(newFound));
         setShowCelebration(true);
       }
     }
@@ -160,9 +161,39 @@ export default function WordSearch() {
 
   useEffect(() => {
     if (!completed && seconds === 0) {
-      handleComplete(foundWords.size);
+      handleComplete(foundWords.size, Array.from(foundWords));
     }
-  }, [seconds, completed, foundWords.size, handleComplete]);
+  }, [seconds, completed, foundWords, handleComplete]);
+
+  // Restore prior attempt: if this puzzle was already completed by the user, fetch
+  // the saved found words and render in locked review mode.
+  useEffect(() => {
+    const pcId = Number((puzzle as any)?.puzzleContentId);
+    const userId = Number((user as any)?.id);
+    if (!pcId || !userId || completed) return;
+    fetch(`${API_BASE}/attempt/user/${userId}/puzzle/${pcId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const savedWords: string[] = Array.isArray(data.userInput) ? data.userInput : [];
+        if (savedWords.length > 0) {
+          setFoundWords(new Set(savedWords));
+          // Recompute cell highlights from the puzzle's placements so the grid renders the found words.
+          const placements = Array.isArray((puzzle as any)?.placements) ? (puzzle as any).placements : [];
+          const cells = new Set<string>();
+          const D: Record<string, [number, number]> = { right: [0, 1], down: [1, 0], diag: [1, 1] };
+          for (const w of savedWords) {
+            const p = placements.find((x: any) => x.word === w);
+            if (!p) continue;
+            const [dr, dc] = D[p.dir] ?? [0, 0];
+            for (let i = 0; i < w.length; i++) cells.add(`${p.row + dr * i},${p.col + dc * i}`);
+          }
+          setHighlightedCells(cells);
+        }
+        setCompleted(true);
+      })
+      .catch(() => { /* silent */ });
+  }, [(puzzle as any)?.puzzleContentId, user]);
 
   useEffect(() => {
     const url = `${API_BASE}/puzzle/today?lang=${lang}&t=${Date.now()}`;

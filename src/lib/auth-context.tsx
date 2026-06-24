@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const SESSION_KEY = "auth_user";
 const EXPIRY_KEY = "auth_expiry";
-const SESSION_MS = 5 * 60 * 1000; // 5 minutes
+const SESSION_MS = 20 * 60 * 1000; // 20 minutes of inactivity
 const NAME_MAP_KEY = "auth_name_map"; // email -> name
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -73,6 +73,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Drop any cached per-puzzle completion flags from the previous session so a
+  // new user doesn't inherit completed/locked cards on the dashboard.
+  const clearPuzzleProgressFlags = () => {
+    try {
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith("completed_puzzle_")) localStorage.removeItem(k);
+      });
+    } catch { /* ignore */ }
+  };
+
   const signIn = async (email: string, password: string, language = "en") => {
     const res = await fetch(`${API_BASE}/auth/signin`, {
       method: "POST",
@@ -86,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const userData = body as User;
     userData.language = (language as Language) || (userData.language as Language) || "en";
+    clearPuzzleProgressFlags();
     setUser(userData);
     setLanguage(userData.language as Language);
     localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_MS));
@@ -113,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userData = body as User;
     userData.language = (language as Language) || (userData.language as Language) || "en";
     userData.region = region || userData.region;
+    clearPuzzleProgressFlags();
     setUser(userData);
     setLanguage(userData.language as Language);
     localStorage.setItem("lang", userData.language);
@@ -124,7 +136,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signOut = () => setUser(null);
+  const signOut = () => {
+    clearPuzzleProgressFlags();
+    setUser(null);
+  };
 
   // Inactivity timer: bump expiry on activity
   useEffect(() => {

@@ -99,7 +99,32 @@ export default function Unjumble() {
     }
   }, [seconds, submitted]);
 
-  const handleComplete = async (correctCount: number) => {
+  // Restore prior attempt: if this puzzle was already completed by the user, fetch
+  // saved answers and render in locked review mode.
+  useEffect(() => {
+    const pcId = Number((puzzle as any)?.puzzleContentId);
+    const userId = Number((user as any)?.id);
+    const q = (puzzle as any).questions ?? [];
+    if (!pcId || !userId || submitted || !q.length) return;
+    fetch(`${API_BASE}/attempt/user/${userId}/puzzle/${pcId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const saved: string[] = Array.isArray(data.userInput) ? data.userInput : [];
+        const restored: WordState[] = q.map((qu: any, i: number) => {
+          const userAnswer = saved[i] ?? "";
+          return {
+            userAnswer,
+            status: (userAnswer === qu.answer ? "correct" : userAnswer ? "incorrect" : "pending") as WordState["status"],
+          };
+        });
+        setWords(restored);
+        setSubmitted(true);
+      })
+      .catch(() => { /* silent */ });
+  }, [(puzzle as any)?.puzzleContentId, user, submitted]);
+
+  const handleComplete = async (correctCount: number, answers: string[]) => {
     const puzzleContentId = Number((puzzle as any)?.puzzleContentId);
     const userId = Number((user as any)?.id);
     if (!puzzleContentId || !userId) {
@@ -122,6 +147,7 @@ export default function Unjumble() {
           puzzleContentId,
           correctWords: correctCount,
           timeTaken,
+          userInput: answers,
         }),
       });
       if (res.ok) {
@@ -161,7 +187,7 @@ export default function Unjumble() {
     setWords(nextWords);
     setSubmitted(true);
     const correctCount = nextWords.filter((w) => w.status === "correct").length;
-    void handleComplete(correctCount);
+    void handleComplete(correctCount, nextWords.map((w) => w.userAnswer));
     setShowCelebration(true);
   };
 
