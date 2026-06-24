@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -48,9 +48,9 @@
     --sidebar-border: 0 0% 89.8%;
     --sidebar-ring: 0 100% 41%;
 
-    --font-heading: 'Noto Sans', 'Noto Sans JP', sans-serif;
-    --font-body: 'Noto Sans', 'Noto Sans JP', sans-serif;
-    --font-mono: 'Roboto Mono', monospace;
+    --font-heading: Helvetica, Arial, 'Noto Sans JP', sans-serif;
+    --font-body: Helvetica, Arial, 'Noto Sans JP', sans-serif;
+    --font-mono: Helvetica, Arial, 'Noto Sans JP', sans-serif;
   }
 }
 

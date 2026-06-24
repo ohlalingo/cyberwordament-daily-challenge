@@ -14,9 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ['Noto Sans', 'Noto Sans JP', 'sans-serif'],
-        body: ['Noto Sans', 'Noto Sans JP', 'sans-serif'],
-        mono: ['Roboto Mono', 'monospace'],
+        heading: ['Helvetica', 'Arial', 'Noto Sans JP', 'sans-serif'],
+        body: ['Helvetica', 'Arial', 'Noto Sans JP', 'sans-serif'],
+        mono: ['Helvetica', 'Arial', 'Noto Sans JP', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
